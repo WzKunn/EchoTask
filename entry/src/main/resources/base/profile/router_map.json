@@ -1,0 +1,20 @@
+{
+  "routerMap": [
+    {
+      "name": "AddTaskPage",
+      "pageSourceFile": "src/main/ets/pages/AddTaskPage.ets",
+      "buildFunction": "AddTaskPageBuilder",
+      "data": {
+        "description" : "this is AddTaskPage"
+      }
+    },
+    {
+      "name": "ChatPage",
+      "pageSourceFile": "src/main/ets/pages/ChatPage.ets",
+      "buildFunction": "ChatPageBuilder",
+      "data": {
+        "description" : "this is ChatPage"
+      }
+    }
+  ]
+}
