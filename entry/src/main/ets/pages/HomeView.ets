@@ -91,7 +91,7 @@ export struct HomeView {
       .justifyContent(FlexAlign.Center)
 
       // --- 3. 底部语音按钮 ---
-      this.VoiceButton()
+      // this.VoiceButton()
 
 
 

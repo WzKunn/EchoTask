@@ -2,7 +2,11 @@
   "string": [
     {
       "name": "app_name",
-      "value": "EchoSaga"
+      "value": "EchoTask"
+    },
+    {
+      "name": "microphone_reason",
+      "value": "用于语音识别生成文本信息"
     }
   ]
 }

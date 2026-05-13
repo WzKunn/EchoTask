@@ -1,4 +1,6 @@
 import { promptAction } from '@kit.ArkUI';
+import { speechRecognizer } from '@kit.CoreSpeechKit'; // 引入语音识别 Kit
+import { abilityAccessCtrl, common } from '@kit.AbilityKit'; // 引入权限控制
 
 @Builder
 export function AddTaskPageBuilder() {
@@ -25,7 +27,110 @@ struct AddTaskPage {
 
   @State isListening: boolean = false;
   @State analyzedTask: TaskItem | null = null;
+  @State recognizedText: string = "";
 
+  // ASR 引擎实例
+  private asrEngine: speechRecognizer.SpeechRecognitionEngine | null = null;
+  private sessionId: string = 'echo_task_session'; // 会话ID
+
+  async aboutToAppear() {
+    // 1. 页面加载时，动态向用户弹窗申请麦克风权限
+    await this.requestMicPermission();
+    // 2. 初始化语音识别引擎
+    this.initASREngine();
+  }
+
+  aboutToDisappear() {
+    // 页面销毁时，必须释放引擎，防止内存泄漏和麦克风被占用
+    if (this.asrEngine) {
+      this.asrEngine.shutdown();
+    }
+  }
+
+  // --- 申请权限 ---
+  async requestMicPermission() {
+    let context = getContext(this) as common.UIAbilityContext;
+    let atManager = abilityAccessCtrl.createAtManager();
+    try {
+      await atManager.requestPermissionsFromUser(context, ['ohos.permission.MICROPHONE']);
+      console.info('麦克风权限申请成功');
+    } catch (err) {
+      console.error('麦克风权限被拒绝', err);
+      promptAction.showToast({ message: '需要麦克风权限才能语音记事哦' });
+    }
+  }
+
+  // 检测并请求麦克风权限
+  async checkAndRequestMicPermission(): Promise<boolean> {
+    let context = getContext(this) as common.UIAbilityContext;
+    let atManager = abilityAccessCtrl.createAtManager();
+    let tokenID = context.applicationInfo.accessTokenId;
+
+    // 1. 先检查当前实时权限状态
+    let checkResult = await atManager.checkAccessToken(tokenID, 'ohos.permission.MICROPHONE');
+
+    if (checkResult === abilityAccessCtrl.GrantStatus.PERMISSION_GRANTED) {
+      return true; // 已经有权限，直接通过
+    }
+
+    // 2. 如果没有权限，发起弹窗申请
+    try {
+      let requestResult = await atManager.requestPermissionsFromUser(context, ['ohos.permission.MICROPHONE']);
+      // 检查用户在弹窗里点的结果 (0 表示允许，-1 表示拒绝)
+      if (requestResult.authResults[0] === 0) {
+        return true;
+      } else {
+        promptAction.showToast({ message: '您拒绝了麦克风权限，无法录音' });
+        return false;
+      }
+    } catch (err) {
+      console.error('申请流程发生异常', err);
+      return false;
+    }
+  }
+
+  // --- 核心：初始化语音识别引擎 ---
+  initASREngine() {
+    // 设置参数：中文、在线识别模式 (由于端侧模型较大，通常默认使用在线服务，速度极快)
+    let extraParam: Record<string, Object> = { "locate": "CN", "recognizerMode": "short" };
+    let initParams: speechRecognizer.CreateEngineParams = {
+      language: 'zh-CN',
+      online: 1,
+      extraParams: extraParam
+    };
+
+    speechRecognizer.createEngine(initParams, (err, engine) => {
+      if (err) {
+        console.error('ASR引擎创建失败:', err);
+        return;
+      }
+      this.asrEngine = engine;
+      console.info('ASR引擎创建成功');
+
+      // 绑定监听器，接收语音识别的结果
+      this.asrEngine.setListener({
+        onStart: (sessionId: string, eventMessage: string) => {
+          console.info(`引擎准备就绪，开始录音: ${sessionId}`);
+        },
+        onEvent: (sessionId: string, eventCode: number, eventMessage: string) => {
+          console.info(`引擎事件触发: ${eventCode} - ${eventMessage}`);
+        },
+        // 当识别有进展时触发（比如你说了一半，它先识别出几个字）
+        onResult: (sessionId: string, result: speechRecognizer.SpeechRecognitionResult) => {
+          this.recognizedText = result.result; // 实时更新到 UI
+        },
+        // 当一句话说完，引擎判定结束时触发
+        onComplete: (sessionId: string, message: string) => {
+          console.info('语音识别彻底完成');
+          this.processTextToTask(this.recognizedText); // 丢给 AI 去提取实体
+        },
+        onError: (sessionId: string, errorCode: number, errorMessage: string) => {
+          console.error(`识别错误: ${errorCode} - ${errorMessage}`);
+          promptAction.showToast({ message: '没听清，请再说一遍' });
+        }
+      });
+    });
+  }
 
   build() {
     NavDestination() {
@@ -38,8 +143,18 @@ struct AddTaskPage {
           Text('语音添加日程')
             .fontSize(24).fontWeight(FontWeight.Bold).margin({ top: 40 })
 
-          Text('长按下方按钮，说出你的安排')
-            .fontSize(14).fontColor('#94a3b8').margin({ top: 8, bottom: 40 })
+          if (this.recognizedText) {
+            Text(this.recognizedText)
+              .fontSize(22)
+              .fontColor('#3b82f6') // 科技感的蓝色
+              .fontWeight(FontWeight.Medium)
+              .margin({ top: 40, left: 20, right: 20 })
+              .textAlign(TextAlign.Center)
+              .animation({ duration: 200, curve: Curve.EaseOut }) // 加上极其丝滑的文字变换动画
+          } else {
+            Text('长按下方按钮，说出你的安排')
+              .fontSize(14).fontColor('#94a3b8').margin({ top: 8, bottom: 40 })
+          }
 
           if (this.analyzedTask) {
             Column() {
@@ -66,7 +181,7 @@ struct AddTaskPage {
         .width('100%')
         .height('100%')
 
-        // --- 底部确认按钮 ---
+        // --- 底部录音按钮 ---
         Column() {
           if (this.isListening) {
             // 模拟波纹动效
@@ -81,10 +196,28 @@ struct AddTaskPage {
           .margin({ bottom: 50 })
           .gesture(
             LongPressGesture()
-              .onAction(() => { this.isListening = true; })
+              .onAction(async () => {
+                // 先检查权限
+                let hasPermission = await this.checkAndRequestMicPermission();
+                if (hasPermission) {
+                  this.isListening = true;
+                  this.recognizedText = "正在听...";
+                  // 权限通过，启动引擎
+                  let startParams: speechRecognizer.StartParams = {
+                    sessionId: this.sessionId,
+                    audioInfo: { audioType: 'pcm', sampleRate: 16000, soundChannel: 1, sampleBit: 16 }
+                  };
+                  this.asrEngine?.startListening(startParams);
+                } else {
+                  // 权限没过，checkAndRequestMicPermission 内部已经弹了 Toast，这里保持静默即可
+                  console.warn('无权限，放弃录音执行');
+                }
+              })
               .onActionEnd(() => {
-                this.isListening = false;
-                this.onVoiceFinish();
+                if (this.isListening) { // 只有在真正开始录音的情况下才结束
+                  this.isListening = false;
+                  this.asrEngine?.finish(this.sessionId);
+                }
               })
           )
         }
@@ -95,17 +228,20 @@ struct AddTaskPage {
       this.pathStack = context.pathStack;
     })
   }
-  // 模拟语音识别及端侧 AI 分析
-  onVoiceFinish() {
-    // 这里未来接入 Speech Kit 和 CoreText Kit
+
+  // 文本转结构化任务，调用自然语言理解kit
+  processTextToTask(text: string) {
+    if (!text || text === "正在听...") {
+      promptAction.showToast({ message: '未识别到语音，请重试' });
+      this.recognizedText = "";
+      return;
+    };
+    promptAction.showToast({ message: '正在提取时间与意图...' });
+
+    // 这里未来接入 CoreText Kit，现在先假装解析成功
     setTimeout(() => {
-      this.analyzedTask = new TaskItem(
-        Date.now().toString(),
-        "完成 Git 冲突处理笔记",
-        "今天 18:00",
-        ["待分类", "AI提取"]
-      );
-    }, 500);
+      this.analyzedTask = new TaskItem(Date.now().toString(), text, "今天待办", ["语音生成"]);
+    }, 800);
   }
 
   confirmAddTask() {

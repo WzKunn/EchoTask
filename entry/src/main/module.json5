@@ -8,6 +8,18 @@
     "deviceTypes": [
       "phone"
     ],
+    "requestPermissions": [
+      {
+        "name": "ohos.permission.MICROPHONE",
+        "reason": "$string:microphone_reason",
+        "usedScene": {
+          "abilities": [
+            "EntryAbility"
+          ],
+          "when": "inuse"
+        }
+      }
+    ],
     "deliveryWithInstall": true,
     "installationFree": false,
     "pages": "$profile:main_pages",
