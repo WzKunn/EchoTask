@@ -3,7 +3,7 @@ import { promptAction, SymbolGlyphModifier, TextModifier } from '@kit.ArkUI';
 import { HdsListItem } from '@kit.UIDesignKit';
 
 // 数据模型 日程任务
-class TaskItem {
+export class TaskItem {
   public id: string;
   public content: string; // 任务内容
   public time: string;    // 时间

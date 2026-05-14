@@ -1,6 +1,7 @@
-import { AbilityConstant, ConfigurationConstant, UIAbility, Want } from '@kit.AbilityKit';
+import { abilityAccessCtrl, AbilityConstant, ConfigurationConstant, UIAbility, Want } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
+import { BusinessError } from '@kit.BasicServicesKit';
 
 const DOMAIN = 0x0000;
 
@@ -24,6 +25,15 @@ export default class EntryAbility extends UIAbility {
 
     let windowClass: window.Window = windowStage.getMainWindowSync();
     windowClass.setWindowLayoutFullScreen(true);
+
+    let atManager: abilityAccessCtrl.AtManager = abilityAccessCtrl.createAtManager();
+    atManager.requestPermissionsFromUser(this.context, ['ohos.permission.MICROPHONE']).then((data) => {
+      hilog.info(0x0000, 'testTag', 'data:' + JSON.stringify(data));
+      hilog.info(0x0000, 'testTag', 'data permissions:' + data.permissions);
+      hilog.info(0x0000, 'testTag', 'data authResults:' + data.authResults);
+    }).catch((err: BusinessError) => {
+      hilog.error(0x0000, 'testTag', 'errCode: ' + err.code + 'errMessage: ' + err.message);
+    });
 
     windowStage.loadContent('pages/Index', (err) => {
       if (err.code) {

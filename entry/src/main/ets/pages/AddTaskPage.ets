@@ -1,25 +1,14 @@
 import { promptAction } from '@kit.ArkUI';
 import { speechRecognizer } from '@kit.CoreSpeechKit'; // 引入语音识别 Kit
 import { abilityAccessCtrl, common } from '@kit.AbilityKit'; // 引入权限控制
+import { NLPUtils } from '../utils/NLPUtils'; // 引入自然语言理解工具类
+import { TaskItem } from '../pages/HomeView';
 
 @Builder
 export function AddTaskPageBuilder() {
   AddTaskPage()
 }
 
-class TaskItem {
-  public id: string;
-  public content: string; // 任务内容
-  public time: string;    // 时间
-  public tags: string[];  // 自动提取的标签
-
-  constructor(id: string, content: string, time: string, tags: string[]) {
-    this.id = id;
-    this.content = content;
-    this.time = time;
-    this.tags = tags;
-  }
-}
 
 @Component
 struct AddTaskPage {
@@ -28,14 +17,15 @@ struct AddTaskPage {
   @State isListening: boolean = false;
   @State analyzedTask: TaskItem | null = null;
   @State recognizedText: string = "";
-
-  // ASR 引擎实例
-  private asrEngine: speechRecognizer.SpeechRecognitionEngine | null = null;
-  private sessionId: string = 'echo_task_session'; // 会话ID
+  private asrEngine: speechRecognizer.SpeechRecognitionEngine | undefined = undefined;
+  @State sessionId: string = 'echo_task_session'; // 会话ID
 
   async aboutToAppear() {
-    // 1. 页面加载时，动态向用户弹窗申请麦克风权限
-    await this.requestMicPermission();
+    let hasMicPermission = await this.checkAndRequestMicPermission();
+    if (!hasMicPermission) {
+      // 1. 页面加载时，动态向用户弹窗申请麦克风权限
+      await this.requestMicPermission();
+    }
     // 2. 初始化语音识别引擎
     this.initASREngine();
   }
@@ -99,12 +89,13 @@ struct AddTaskPage {
       extraParams: extraParam
     };
 
-    speechRecognizer.createEngine(initParams, (err, engine) => {
+    speechRecognizer.createEngine(initParams, (err, speechRecognitionEngine:
+      speechRecognizer.SpeechRecognitionEngine) => {
       if (err) {
         console.error('ASR引擎创建失败:', err);
         return;
       }
-      this.asrEngine = engine;
+      this.asrEngine = speechRecognitionEngine;
       console.info('ASR引擎创建成功');
 
       // 绑定监听器，接收语音识别的结果
@@ -203,9 +194,17 @@ struct AddTaskPage {
                   this.isListening = true;
                   this.recognizedText = "正在听...";
                   // 权限通过，启动引擎
+                  let audioParam: speechRecognizer.AudioInfo = { audioType: 'pcm', sampleRate: 16000, soundChannel: 1, sampleBit: 16 };
+                  let extraParam: Record<string, Object> = {
+                    'recognitionMode': 0,
+                    'vadBegin': 2000,
+                    'vadEnd': 3000,
+                    'maxAudioDuration': 20000
+                  };
                   let startParams: speechRecognizer.StartParams = {
                     sessionId: this.sessionId,
-                    audioInfo: { audioType: 'pcm', sampleRate: 16000, soundChannel: 1, sampleBit: 16 }
+                    audioInfo: audioParam,
+                    extraParams: extraParam
                   };
                   this.asrEngine?.startListening(startParams);
                 } else {
@@ -230,7 +229,7 @@ struct AddTaskPage {
   }
 
   // 文本转结构化任务，调用自然语言理解kit
-  processTextToTask(text: string) {
+  async processTextToTask(text: string) {
     if (!text || text === "正在听...") {
       promptAction.showToast({ message: '未识别到语音，请重试' });
       this.recognizedText = "";
@@ -238,10 +237,17 @@ struct AddTaskPage {
     };
     promptAction.showToast({ message: '正在提取时间与意图...' });
 
-    // 这里未来接入 CoreText Kit，现在先假装解析成功
-    setTimeout(() => {
-      this.analyzedTask = new TaskItem(Date.now().toString(), text, "今天待办", ["语音生成"]);
-    }, 800);
+    try {
+      // 调用封装好的 NLP 引擎，利用 async/await 等待解析结果
+      let parsedTask = await NLPUtils.analyzeTaskSemantic(text);
+
+      // 将结构化的结果赋值给 UI 绑定的变量，触发确认卡片的显示
+      this.analyzedTask = parsedTask;
+
+    } catch (error) {
+      console.error('NLP 解析失败', error);
+      promptAction.showToast({ message: '语义太复杂啦，请换个说法' });
+    }
   }
 
   confirmAddTask() {
