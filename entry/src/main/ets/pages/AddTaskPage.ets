@@ -65,9 +65,11 @@ struct AddTaskPage {
 
     // 2. 如果没有权限，发起弹窗申请
     try {
-      let requestResult = await atManager.requestPermissionsFromUser(context, ['ohos.permission.MICROPHONE']);
-      // 检查用户在弹窗里点的结果 (0 表示允许，-1 表示拒绝)
-      if (requestResult.authResults[0] === 0) {
+      // 再次申请权限
+      await atManager.requestPermissionOnSetting(context, ['ohos.permission.MICROPHONE']);
+
+      let checkResult1 = await atManager.checkAccessToken(tokenID, 'ohos.permission.MICROPHONE');
+      if (checkResult1 === abilityAccessCtrl.GrantStatus.PERMISSION_GRANTED) {
         return true;
       } else {
         promptAction.showToast({ message: '您拒绝了麦克风权限，无法录音' });

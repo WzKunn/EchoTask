@@ -1,6 +1,8 @@
 import router from '@ohos.router';
 import { promptAction, SymbolGlyphModifier, TextModifier } from '@kit.ArkUI';
 import { HdsListItem } from '@kit.UIDesignKit';
+import { calendarMgr } from '../utils/CalendarManager';
+import { abilityAccessCtrl, common, Permissions } from '@kit.AbilityKit';
 
 // 数据模型 日程任务
 export class TaskItem {
@@ -35,7 +37,8 @@ export struct HomeView {
     this.dataSource.setItems(this.tasks);
   }
 
-  aboutToAppear() {
+  async aboutToAppear() {
+
     if (this.tasks.length === 0) {
       this.tasks = [
         new TaskItem('1', '修复 MiniEngine 向量数学模块报错', '明天 09:00', ['技术', '紧急']),
@@ -45,6 +48,65 @@ export struct HomeView {
     }
     // 将数据源与全局状态同步
     this.dataSource.setItems(this.tasks);
+    try {
+      let haspermission = await this.checkAndRequestCalendarPermission();
+      if (haspermission) {
+        // 初始化日历服务
+        await calendarMgr.init(getContext(this) as common.UIAbilityContext);
+      } else {
+        console.error('未授权日历权限');
+      }
+    } catch (err) {
+      console.error('日历初始化失败', err);
+    }
+  }
+
+  // 自定义左滑按钮
+  @Builder swipeActionsBuilder(task: TaskItem) {
+    Row() {
+      // 添加至日历按钮
+      Button() {
+        SymbolGlyph($r('sys.symbol.calendar_badge_plus')).fontColor([Color.White])
+      }
+      .backgroundColor('#3b82f6')
+      .width(75)
+      .height('100%')
+      .type(ButtonType.Normal)
+      .onClick(async () => {
+        let haspermission = await this.checkAndRequestCalendarPermission();
+        if (haspermission) {
+          let success = await calendarMgr.addEvent(task);
+          if (success) {
+            promptAction.showToast({ message: '已同步至系统日历' });
+          }
+        }
+      })
+
+      // 删除按钮
+      // 按钮 2：删除任务 (警示红)
+      Button() {
+        SymbolGlyph($r('sys.symbol.trash')).fontColor([Color.White]).fontSize(24)
+      }
+      .backgroundColor('#ef4444')
+      .width(75)
+      .height('100%')
+      .type(ButtonType.Normal)
+      .onClick((item) => {
+        // 1. 从全局大管家 AppStorage 里把当前的列表拿出来
+        let currentTasks = AppStorage.get<TaskItem[]>('taskList') || [];
+
+        // 2. 找到并剔除掉当前这一项 (利用 filter 过滤)
+        // 只要 id 不等于当前这个任务 id 的，都保留下来
+        let updatedTasks = currentTasks.filter(t => t.id !== task.id);
+
+        // 3. 把更新后的新数组重新塞回 AppStorage
+        // 重点：这一步执行后，HomeView 里的 @Watch('onTasksChange') 会瞬间被触发
+        // 它会自动调用你的 dataSource.setItems(updatedTasks)，列表里的卡片就消失了
+        AppStorage.setOrCreate('taskList', updatedTasks);
+
+        promptAction.showToast({ message: '任务已删除' });
+      })
+    }
   }
 
   build() {
@@ -63,7 +125,10 @@ export struct HomeView {
             ListItem() {
               this.TaskCard(item)
             }
-            .swipeAction({ end: this.deleteBuilder(item) })
+            .swipeAction({
+              end: this.swipeActionsBuilder(item),
+              edgeEffect: SwipeEdgeEffect.Spring
+            })
           }, (item: TaskItem) => item.id)
         }
         .width('100%')
@@ -198,6 +263,45 @@ export struct HomeView {
     .backgroundColor(Color.Red)
     .onClick(() => this.dataSource.deleteItem(item))
   }
+
+  // 检测并请求日历权限
+  async checkAndRequestCalendarPermission(): Promise<boolean> {
+    let context = getContext(this) as common.UIAbilityContext;
+    let atManager = abilityAccessCtrl.createAtManager();
+    let tokenID = context.applicationInfo.accessTokenId;
+
+    try {
+      // 1. 先检查当前的读写权限状态
+      let readCheck = await atManager.checkAccessToken(tokenID, 'ohos.permission.READ_CALENDAR');
+      let writeCheck = await atManager.checkAccessToken(tokenID, 'ohos.permission.WRITE_CALENDAR');
+
+      // 只要读和写都有权限，直接放行
+      if (readCheck === abilityAccessCtrl.GrantStatus.PERMISSION_GRANTED &&
+        writeCheck === abilityAccessCtrl.GrantStatus.PERMISSION_GRANTED) {
+        return true;
+      }
+
+      // 2. 如果没有权限，发起弹窗申请 (同时申请读和写)
+      let requestResult = await atManager.requestPermissionOnSetting(context, [
+        'ohos.permission.READ_CALENDAR',
+        'ohos.permission.WRITE_CALENDAR'
+      ]);
+
+      let checkResult_cld1 = await atManager.checkAccessToken(tokenID, 'ohos.permission.READ_CALENDAR');
+      let checkResult_cld2 = await atManager.checkAccessToken(tokenID, 'ohos.permission.WRITE_CALENDAR');
+      if (checkResult_cld1 === abilityAccessCtrl.GrantStatus.PERMISSION_GRANTED &&
+          checkResult_cld2 === abilityAccessCtrl.GrantStatus.PERMISSION_GRANTED) {
+        return true;
+      } else {
+        promptAction.showToast({ message: '您拒绝了麦克风权限，无法录音' });
+        return false;
+      }
+
+    } catch (err) {
+      console.error('日历权限申请发生异常:', err);
+      return false;
+    }
+  }
 }
 
 
@@ -235,3 +339,4 @@ export class LazyDataSource<T> implements IDataSource {
   public registerDataChangeListener(listener: DataChangeListener): void { this.listeners.add(listener); }
   public unregisterDataChangeListener(listener: DataChangeListener): void { this.listeners.delete(listener); }
 }
+

@@ -35,6 +35,22 @@ export default class EntryAbility extends UIAbility {
       hilog.error(0x0000, 'testTag', 'errCode: ' + err.code + 'errMessage: ' + err.message);
     });
 
+    atManager.requestPermissionsFromUser(this.context, ['ohos.permission.READ_CALENDAR']).then((data) => {
+      hilog.info(0x0000, 'testTag', 'data:' + JSON.stringify(data));
+      hilog.info(0x0000, 'testTag', 'data permissions:' + data.permissions);
+      hilog.info(0x0000, 'testTag', 'data authResults:' + data.authResults);
+    }).catch((err: BusinessError) => {
+      hilog.error(0x0000, 'testTag', 'errCode: ' + err.code + 'errMessage: ' + err.message);
+    });
+
+    atManager.requestPermissionsFromUser(this.context, ['ohos.permission.WRITE_CALENDAR']).then((data) => {
+      hilog.info(0x0000, 'testTag', 'data:' + JSON.stringify(data));
+      hilog.info(0x0000, 'testTag', 'data permissions:' + data.permissions);
+      hilog.info(0x0000, 'testTag', 'data authResults:' + data.authResults);
+    }).catch((err: BusinessError) => {
+      hilog.error(0x0000, 'testTag', 'errCode: ' + err.code + 'errMessage: ' + err.message);
+    });
+
     windowStage.loadContent('pages/Index', (err) => {
       if (err.code) {
         hilog.error(DOMAIN, 'testTag', 'Failed to load the content. Cause: %{public}s', JSON.stringify(err));
