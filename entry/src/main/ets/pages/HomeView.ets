@@ -3,6 +3,7 @@ import { promptAction, SymbolGlyphModifier, TextModifier } from '@kit.ArkUI';
 import { HdsListItem } from '@kit.UIDesignKit';
 import { calendarMgr } from '../utils/CalendarManager';
 import { abilityAccessCtrl, common, Permissions } from '@kit.AbilityKit';
+import { taskStore } from '../utils/TaskStore';
 
 // 数据模型 日程任务
 export class TaskItem {
@@ -39,13 +40,33 @@ export struct HomeView {
 
   async aboutToAppear() {
 
-    if (this.tasks.length === 0) {
-      this.tasks = [
-        new TaskItem('1', '修复 MiniEngine 向量数学模块报错', '明天 09:00', ['技术', '紧急']),
-        new TaskItem('2', '复习 C++ 算法：优先队列优化', '后天 14:30', ['学习'])
-      ];
+    // 1. 【核心优化】：应用启动，直接去硬盘里把所有存过的任务捞出来
+    try {
+      let realTasks: TaskItem[] = await taskStore.queryAllTasks();
+
+      // 2. 如果是第一次打开应用，数据库是空的，我们可以预置一条欢迎任务
+      if (realTasks.length === 0) {
+        const welcomeTask = new TaskItem('welcome_id', '欢迎使用灵犀管家！左滑试试看吧', '今天 09:00', ['有爱']);
+        // 顺手存进数据库，下次就不是空表了
+        await taskStore.insertTask(welcomeTask);
+        realTasks.push(welcomeTask);
+      }
+
+      // 3. 把从硬盘里查出来的真数据，同步到全局大管家 AppStorage 内存中
+      this.tasks = realTasks;
       AppStorage.setOrCreate('taskList', this.tasks);
+
+    } catch (dbError) {
+      console.error('主页加载读取数据库失败:', dbError);
     }
+    // if (this.tasks.length === 0) {
+    //   this.tasks = [
+    //     new TaskItem('1', '修复 MiniEngine 向量数学模块报错', '明天 09:00', ['技术', '紧急']),
+    //     new TaskItem('2', '复习 C++ 算法：优先队列优化', '后天 14:30', ['学习'])
+    //   ];
+    //   AppStorage.setOrCreate('taskList', this.tasks);
+    // }
+
     // 将数据源与全局状态同步
     this.dataSource.setItems(this.tasks);
     try {

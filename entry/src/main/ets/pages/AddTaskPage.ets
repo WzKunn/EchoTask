@@ -3,6 +3,7 @@ import { speechRecognizer } from '@kit.CoreSpeechKit'; // 引入语音识别 Kit
 import { abilityAccessCtrl, common } from '@kit.AbilityKit'; // 引入权限控制
 import { NLPUtils } from '../utils/NLPUtils'; // 引入自然语言理解工具类
 import { TaskItem } from '../pages/HomeView';
+import { taskStore } from '../utils/TaskStore';
 
 @Builder
 export function AddTaskPageBuilder() {
@@ -252,8 +253,10 @@ struct AddTaskPage {
     }
   }
 
-  confirmAddTask() {
+  async confirmAddTask() {
     if (this.analyzedTask) {
+      // 写入数据库
+      await taskStore.insertTask(this.analyzedTask);
       // 从全局存储中拿到列表并更新
       let currentTasks = AppStorage.get<TaskItem[]>('taskList') || [];
       currentTasks.unshift(this.analyzedTask);

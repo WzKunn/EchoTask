@@ -2,17 +2,25 @@ import { abilityAccessCtrl, AbilityConstant, ConfigurationConstant, UIAbility, W
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
 import { BusinessError } from '@kit.BasicServicesKit';
+import { taskStore } from '../utils/TaskStore';
 
 const DOMAIN = 0x0000;
 
 export default class EntryAbility extends UIAbility {
-  onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
+  async onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): Promise<void> {
     try {
       this.context.getApplicationContext().setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET);
     } catch (err) {
       hilog.error(DOMAIN, 'testTag', 'Failed to set colorMode. Cause: %{public}s', JSON.stringify(err));
     }
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onCreate');
+    try {
+      // 3. 【核心代码】：调用初始化，并把大门的通行证 this.context 传进去
+      await taskStore.initDB(this.context);
+      console.info('EntryAbility 数据库初始化成功');
+    } catch (err) {
+      console.error('EntryAbility 数据库初始化失败:', err);
+    }
   }
 
   onDestroy(): void {
