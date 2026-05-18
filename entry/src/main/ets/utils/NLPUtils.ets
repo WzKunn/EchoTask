@@ -1,12 +1,60 @@
 import { TaskItem } from '../pages/HomeView';
 import { textProcessing, EntityType } from '@kit.NaturalLanguageKit';
+import { http } from '@kit.NetworkKit';
+import { promptAction } from '@kit.ArkUI';
+
+// 1. 定义大模型 API 返回的结构
+interface LLMMessage {
+  content: string;
+}
+interface LLMChoice {
+  message: LLMMessage;
+}
+interface LLMResponse {
+  choices: LLMChoice[];
+}
+
+// 2. 定义我们期望 AI 吐出的 JSON 结构
+interface ParsedTask {
+  content: string;
+  time: string;
+  tags: string[];
+}
+// 定义请求里的消息对象长什么样
+interface ReqMessage {
+  role: string;
+  content: string;
+}
+// 定义整个请求体的结构
+interface LLMRequest {
+  model: string;
+  messages: ReqMessage[];
+  temperature: number;
+}
+
 
 export class NLPUtils {
+
+  // 统一的入口方法
+  public static async analyzeTaskSemantic(rawText: string): Promise<TaskItem> {
+    // 1. 从内存管家里拿出用户在 MineView 里设置的配置
+    let useCloud = AppStorage.get<boolean>('useCloudModel') || false;
+    let apiKey = AppStorage.get<string>('cloudApiKey') || '';
+
+    // 2. 智能路由
+    if (useCloud && apiKey.length > 0) {
+      console.info('☁️ 路由走向：云端大模型');
+      return await NLPUtils.analyzeWithCloudModel(rawText);
+    } else {
+      console.info('📱 路由走向：本地离线正则');
+      return await NLPUtils.analyzeWithLocalRegEx(rawText);
+    }
+  }
 
   /**
    * 接入官方 Natural Language Kit 进行实体抽取
    */
-  public static async analyzeTaskSemantic(rawText: string): Promise<TaskItem> {
+  public static async analyzeWithLocalRegEx(rawText: string): Promise<TaskItem> {
     console.info(`[NLP Engine] 开始解析文本: ${rawText}`);
 
     if (rawText.length < 2) {
@@ -83,4 +131,77 @@ export class NLPUtils {
 
     return new TaskItem(taskId, pureContent, extractedTime, tags);
   }
+
+  // 云端模型
+  private static async analyzeWithCloudModel(rawText: string): Promise<TaskItem> {
+    let apiUrl = AppStorage.get<string>('cloudApiUrl') || '';
+    let apiKey = AppStorage.get<string>('cloudApiKey') || '';
+    let apiModel = AppStorage.get<string>('cloudApiModel') || '';
+
+    // 1. 创建 HTTP 请求任务
+    let httpRequest = http.createHttp();
+
+    // 2. 编写系统提示词
+    let systemPrompt = `你是一个日程管家API。请从用户的输入中提取任务内容(content)、时间(time，格式如'明天 14:00')和标签(tags，字符串数组)。
+请严格且仅返回JSON格式，绝对不要包含任何额外的markdown标记(如 \`\`\`json)或解释性文字。
+范例：{"content": "去机房写实验报告", "time": "明天 14:30", "tags": ["学习", "重要"]}`;
+
+    // 3. 按照各大模型通用标准 (OpenAI/GLM 格式) 组装请求体
+    let msgList: ReqMessage[] = [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: rawText }
+    ];
+    let requestData: LLMRequest = {
+      model: apiModel,
+      messages: msgList,
+      temperature: 0.1 // 温度调低，让 AI 的输出更加确定、不发散
+    };
+
+    try {
+      // 4. 发起异步 POST 请求
+      let response = await httpRequest.request(
+        apiUrl,
+        {
+          method: http.RequestMethod.POST,
+          header: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          extraData: JSON.stringify(requestData),
+          connectTimeout: 10000, // 10秒连不上就放弃
+          readTimeout: 10000
+        }
+      );
+
+      if (response.responseCode === 200) {
+        // 5. 解析 HTTP 响应
+        let resData = JSON.parse(response.result as string) as LLMResponse;
+        let aiOutput: string = resData.choices[0].message.content;
+
+        // 6. 防御性编程：清洗 AI 可能误带的 Markdown 代码块残留
+        let cleanJsonStr = aiOutput.replace(/```json/g, '').replace(/```/g, '').trim();
+        let parsedObj = JSON.parse(cleanJsonStr) as ParsedTask;
+
+        let taskId = Date.now().toString();
+        console.info('☁️ 云端解析成功:', cleanJsonStr);
+        return new TaskItem(taskId, parsedObj.content, parsedObj.time, parsedObj.tags);
+
+      } else {
+        console.error(`云端请求失败，HTTP状态码: ${response.responseCode}`);
+        promptAction.showToast({ message: '云端请求失败，请您检查URL和API是否填写正确\n已为您切换至本地解析模式' });
+        // 请求失败，立刻触发【优雅降级】，用本地正则解析顶上
+        return await NLPUtils.analyzeWithLocalRegEx(rawText);
+      }
+
+    } catch (err) {
+      console.error('云端大模型网络请求异常:', err);
+      promptAction.showToast({ message: '网络异常，已为您切换至本地解析服务' });
+      // 网络断开或超时，触发本地降级
+      return await NLPUtils.analyzeWithLocalRegEx(rawText);
+    } finally {
+      // 7. 无论成功失败，必须销毁请求释放系统资源
+      httpRequest.destroy();
+    }
+  }
+
 }

@@ -15,12 +15,18 @@ export default class EntryAbility extends UIAbility {
     }
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onCreate');
     try {
-      // 3. 【核心代码】：调用初始化，并把大门的通行证 this.context 传进去
+      // 【核心代码】：调用初始化，并把大门的通行证 this.context 传进去
       await taskStore.initDB(this.context);
       console.info('EntryAbility 数据库初始化成功');
     } catch (err) {
       console.error('EntryAbility 数据库初始化失败:', err);
     }
+
+    // 持久化储存api信息
+    PersistentStorage.persistProp('useCloudModel', false);
+    PersistentStorage.persistProp('cloudApiModel', '');
+    PersistentStorage.persistProp('cloudApiKey', '');
+    PersistentStorage.persistProp('cloudApiUrl', '');
   }
 
   onDestroy(): void {

@@ -38,7 +38,8 @@
           ],
           "when": "inuse"
         }
-      }
+      },
+      { "name": "ohos.permission.INTERNET"}
     ],
     "deliveryWithInstall": true,
     "installationFree": false,
