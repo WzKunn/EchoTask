@@ -138,11 +138,17 @@ export class NLPUtils {
     let apiKey = AppStorage.get<string>('cloudApiKey') || '';
     let apiModel = AppStorage.get<string>('cloudApiModel') || '';
 
+    // 智能拼接：用户只需填 Base URL，自动补全 /chat/completions
+    // 兼容用户已填完整路径的情况，适配所有 OpenAI 兼容格式的大模型 API
+    if (!apiUrl.endsWith('/chat/completions')) {
+      apiUrl = apiUrl.replace(/\/+$/, '') + '/chat/completions';
+    }
+
     // 1. 创建 HTTP 请求任务
     let httpRequest = http.createHttp();
 
     // 2. 编写系统提示词
-    let systemPrompt = `你是一个日程管家API。请从用户的输入中提取任务内容(content)、时间(time，格式如'明天 14:00')和标签(tags，字符串数组)。
+    let systemPrompt = `你是一个日程管家API。请从用户的输入中提取任务内容(content)、时间(time，格式如'明天 14:00'，注意将“明早””明晚“统一转换为“明天早上”“明天晚上”)和标签(tags，字符串数组)。
 请严格且仅返回JSON格式，绝对不要包含任何额外的markdown标记(如 \`\`\`json)或解释性文字。
 范例：{"content": "去机房写实验报告", "time": "明天 14:30", "tags": ["学习", "重要"]}`;
 
@@ -168,8 +174,8 @@ export class NLPUtils {
             'Authorization': `Bearer ${apiKey}`
           },
           extraData: JSON.stringify(requestData),
-          connectTimeout: 10000, // 10秒连不上就放弃
-          readTimeout: 10000
+          connectTimeout: 15000, // 15秒连不上就放弃
+          readTimeout: 30000   // 大模型推理可能较慢，给足30秒等待时间
         }
       );
 

@@ -31,7 +31,7 @@ export struct MineView {
           TextInput({ text: this.cloudApiModel, placeholder: '请输入模型名称 (如 glm-4)' })
             .onChange((value: string) => { this.cloudApiModel = value; })
 
-          TextInput({ text: this.cloudApiUrl, placeholder: '请输入 API URL' })
+          TextInput({ text: this.cloudApiUrl, placeholder: '请输入 Base URL (如 https://open.bigmodel.cn/api/paas/v4)' })
             .onChange((value: string) => {
               this.cloudApiUrl = value;
             })
@@ -45,8 +45,8 @@ export struct MineView {
           Button('保存配置')
             .width('100%')
             .onClick(() => {
-              if (!this.cloudApiKey) {
-                promptAction.showToast({ message: 'API Key 不能为空' });
+              if (!this.cloudApiKey || !this.cloudApiModel || !this.cloudApiUrl) {
+                promptAction.showToast({ message: '请填写全部信息' });
                 return;
               }
               promptAction.showToast({ message: '配置已保存' });
