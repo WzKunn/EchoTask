@@ -27,6 +27,11 @@ export default class EntryAbility extends UIAbility {
     PersistentStorage.persistProp('cloudApiModel', '');
     PersistentStorage.persistProp('cloudApiKey', '');
     PersistentStorage.persistProp('cloudApiUrl', '');
+
+    // 持久化用户个人信息
+    PersistentStorage.persistProp('userNickname', 'EchoTask 用户');
+    PersistentStorage.persistProp('userSignature', '用声音管理生活 ✨');
+    PersistentStorage.persistProp('firstUseDate', '');
   }
 
   onDestroy(): void {
