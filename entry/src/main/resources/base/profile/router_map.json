@@ -15,6 +15,14 @@
       "data": {
         "description" : "this is ChatPage"
       }
+    },
+    {
+      "name": "SearchPage",
+      "pageSourceFile": "src/main/ets/pages/SearchPage.ets",
+      "buildFunction": "SearchPageBuilder",
+      "data": {
+        "description" : "this is SearchPage"
+      }
     }
   ]
 }

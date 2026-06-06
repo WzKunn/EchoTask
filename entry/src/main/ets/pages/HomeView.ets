@@ -4,18 +4,21 @@ import { HdsListItem } from '@kit.UIDesignKit';
 import { calendarMgr } from '../utils/CalendarManager';
 import { abilityAccessCtrl, common, Permissions } from '@kit.AbilityKit';
 import { taskStore } from '../utils/TaskStore';
+import { TimeUtils } from '../utils/TimeUtils';
 
 // 数据模型 日程任务
 export class TaskItem {
   public id: string;
-  public content: string; // 任务内容
-  public time: string;    // 时间
-  public tags: string[];  // 自动提取的标签
+  public content: string;   // 任务内容
+  public time: string;      // UI 展示用的友好时间文案（如"明天 14:00"）
+  public timestamp: number; // Unix 毫秒时间戳，用于排序和搜索
+  public tags: string[];    // 自动提取的标签
 
-  constructor(id: string, content: string, time: string, tags: string[]) {
+  constructor(id: string, content: string, time: string, timestamp: number, tags: string[]) {
     this.id = id;
     this.content = content;
     this.time = time;
+    this.timestamp = timestamp;
     this.tags = tags;
   }
 }
@@ -46,7 +49,7 @@ export struct HomeView {
 
       // 2. 如果是第一次打开应用，数据库是空的，我们可以预置一条欢迎任务
       if (realTasks.length === 0) {
-        const welcomeTask = new TaskItem('welcome_id', '欢迎使用灵犀管家！左滑试试看吧', '今天 09:00', ['有爱']);
+        const welcomeTask = new TaskItem('welcome_id', '欢迎使用灵犀管家！左滑试试看吧', '今天 09:00', Date.now(), ['有爱']);
         // 顺手存进数据库，下次就不是空表了
         await taskStore.insertTask(welcomeTask);
         realTasks.push(welcomeTask);
@@ -167,9 +170,9 @@ export struct HomeView {
           this.pathStack.pushPathByName('AddTaskPage', null);
         })
 
-        // 按钮 2：搜索日程 (进阶任务入口)
+        // 按钮 2：搜索日程
         this.IconButton('搜索回溯', 'sys.symbol.magnifyingglass', '#64748b', () => {
-          promptAction.showToast({ message: '语义搜索功能开发中...' });
+          this.pathStack.pushPathByName('SearchPage', null);
         })
       }
       .width('100%')
@@ -214,7 +217,7 @@ export struct HomeView {
       .width('100%')
 
       Row() {
-        Text(item.time)
+        Text(item.timestamp > 0 ? TimeUtils.formatTimestamp(item.timestamp) : item.time)
           .fontSize(13)
           .fontColor('#64748b')
 
@@ -272,6 +275,7 @@ export struct HomeView {
       Date.now().toString(),
       "新任务：" + text,
       "自动识别中...",
+      Date.now(),
       ["待分类"]
     ));
     promptAction.showToast({ message: '已通过语音创建日程' });
