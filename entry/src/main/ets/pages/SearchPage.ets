@@ -182,7 +182,7 @@ struct SearchPage {
       .width('100%')
 
       Row() {
-        Text(item.timestamp > 0 ? TimeUtils.formatTimestamp(item.timestamp) : item.time)
+        Text(TimeUtils.formatTimestamp(item.timestamp))
           .fontSize(13)
           .fontColor('#64748b')
 
