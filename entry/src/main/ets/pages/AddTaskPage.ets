@@ -5,6 +5,7 @@ import { NLPUtils } from '../utils/NLPUtils';
 import { TaskItem } from '../pages/HomeView';
 import { taskStore } from '../utils/TaskStore';
 import { TimeUtils } from '../utils/TimeUtils';
+import { IntentManager } from '../utils/IntentManager';
 
 @Builder
 export function AddTaskPageBuilder() {
@@ -740,6 +741,11 @@ struct AddTaskPage {
 
     // 写入数据库
     await taskStore.insertTask(newTask);
+    
+    // 共享意图至小艺建议
+    let context = getContext(this) as common.UIAbilityContext;
+    IntentManager.shareTaskIntent(context, newTask);
+
     // 更新全局内存列表 (通过新建数组以确保触发 AppStorage 监听刷新)
     let currentTasks = AppStorage.get<TaskItem[]>('taskList') || [];
     let updatedTasks: TaskItem[] = [newTask];

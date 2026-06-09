@@ -63,6 +63,12 @@
               "ohos.want.action.home"
             ]
           }
+        ],
+        "metadata": [
+          {
+            "name": "ohos.ability.insightIntentProfile",
+            "resource": "$profile:insight_intent"
+          }
         ]
       }
     ],
