@@ -87,15 +87,24 @@ export struct HomeView {
 
   // 自定义左滑按钮
   @Builder swipeActionsBuilder(task: TaskItem) {
-    Row() {
+    Row({ space: 8 }) {
       // 添加至日历按钮
-      Button() {
-        SymbolGlyph($r('sys.symbol.calendar_badge_plus')).fontColor([Color.White])
+      Column({ space: 4 }) {
+        SymbolGlyph($r('sys.symbol.calendar_badge_plus'))
+          .fontSize(20)
+          .fontColor([Color.White])
+
+        Text('日历')
+          .fontSize(10)
+          .fontColor(Color.White)
       }
+      .width(56)
+      .height(56)
+      .justifyContent(FlexAlign.Center)
+      .alignItems(HorizontalAlign.Center)
       .backgroundColor('#3b82f6')
-      .width(75)
-      .height('100%')
-      .type(ButtonType.Normal)
+      .borderRadius(14)
+      .shadow({ radius: 8, color: 'rgba(59,130,246,0.3)', offsetY: 2 })
       .onClick(async () => {
         let haspermission = await this.checkAndRequestCalendarPermission();
         if (haspermission) {
@@ -107,30 +116,35 @@ export struct HomeView {
       })
 
       // 删除按钮
-      // 按钮 2：删除任务 (警示红)
-      Button() {
-        SymbolGlyph($r('sys.symbol.trash')).fontColor([Color.White]).fontSize(24)
+      Column({ space: 4 }) {
+        SymbolGlyph($r('sys.symbol.trash'))
+          .fontSize(20)
+          .fontColor([Color.White])
+
+        Text('删除')
+          .fontSize(10)
+          .fontColor(Color.White)
       }
+      .width(56)
+      .height(56)
+      .justifyContent(FlexAlign.Center)
+      .alignItems(HorizontalAlign.Center)
       .backgroundColor('#ef4444')
-      .width(75)
-      .height('100%')
-      .type(ButtonType.Normal)
-      .onClick((item) => {
-        // 1. 从全局大管家 AppStorage 里把当前的列表拿出来
+      .borderRadius(14)
+      .shadow({ radius: 8, color: 'rgba(239,68,68,0.3)', offsetY: 2 })
+      .onClick(async () => {
+        // 1. 先从数据库中永久删除
+        await taskStore.deleteTask(task.id);
+        // 2. 再从内存中移除，触发 UI 刷新
         let currentTasks = AppStorage.get<TaskItem[]>('taskList') || [];
-
-        // 2. 找到并剔除掉当前这一项 (利用 filter 过滤)
-        // 只要 id 不等于当前这个任务 id 的，都保留下来
         let updatedTasks = currentTasks.filter(t => t.id !== task.id);
-
-        // 3. 把更新后的新数组重新塞回 AppStorage
-        // 重点：这一步执行后，HomeView 里的 @Watch('onTasksChange') 会瞬间被触发
-        // 它会自动调用你的 dataSource.setItems(updatedTasks)，列表里的卡片就消失了
         AppStorage.setOrCreate('taskList', updatedTasks);
-
         promptAction.showToast({ message: '任务已删除' });
       })
     }
+    .padding({ left: 8, right: 12 })
+    .height('100%')
+    .alignItems(VerticalAlign.Center)
   }
 
   build() {

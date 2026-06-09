@@ -80,16 +80,20 @@ export class CalendarManager {
   public async addEvent(task: TaskItem): Promise<boolean> {
     if (!this.myCalendar) return false;
 
-    // 解析我们的 TaskItem 时间 (简单处理，默认设为1小时日程)
-    const startTime = this.parseTaskTime(task.time);
-    const endTime = startTime + 60 * 60 * 1000;
+    // 直接使用任务的精准时间戳，不再重新解析文字
+    let startTime = task.timestamp;
+    if (startTime <= 0) {
+      // 兜底：如果时间戳无效，使用当前时间
+      startTime = Date.now();
+    }
+    let endTime = startTime + 60 * 60 * 1000;
 
-    const event: calendarManager.Event = {
-      title: `[EchoTask] ${task.content}`,
+    let event: calendarManager.Event = {
+      title: '[EchoTask] ' + task.content,
       startTime: startTime,
       endTime: endTime,
       type: calendarManager.EventType.NORMAL,
-      description: `来自EchoTask的智能提醒。标签: ${task.tags.join(', ')}`,
+      description: '来自EchoTask的智能提醒。标签: ' + task.tags.join(', '),
       // 设置提醒：日程开始前 10 分钟弹窗
       reminderTime: [10]
     };
