@@ -14,10 +14,12 @@ const SQL_CREATE_TABLE = 'CREATE TABLE IF NOT EXISTS ' + TABLE_NAME + ' (' +
   'content TEXT, ' +
   'time TEXT, ' +
   'timestamp INTEGER DEFAULT 0, ' +
-  'tags TEXT' +
+  'tags TEXT, ' +
+  'isCompleted INTEGER DEFAULT 0' +
 ')';
 // 旧版迁移：尝试为已有表添加 timestamp 列
 const SQL_ADD_TIMESTAMP_COLUMN = 'ALTER TABLE ' + TABLE_NAME + ' ADD COLUMN timestamp INTEGER DEFAULT 0';
+const SQL_ADD_IS_COMPLETED_COLUMN = 'ALTER TABLE ' + TABLE_NAME + ' ADD COLUMN isCompleted INTEGER DEFAULT 0';
 // 迁移兜底：用 id（Date.now 字符串）填充旧数据的 timestamp
 const SQL_BACKFILL_TIMESTAMP = 'UPDATE ' + TABLE_NAME + ' SET timestamp = CAST(id AS INTEGER) WHERE timestamp = 0 AND id != \'welcome_id\'';
 
@@ -53,6 +55,14 @@ export class TaskStore {
         console.info('[DB] timestamp 列已存在，跳过迁移');
       }
 
+      // 尝试迁移：为旧版本添加 isCompleted 列
+      try {
+        await this.rdbStore.executeSql(SQL_ADD_IS_COMPLETED_COLUMN);
+        console.info('[DB] 迁移成功：已添加 isCompleted 列');
+      } catch (migrateErr) {
+        console.info('[DB] isCompleted 列已存在，跳过迁移');
+      }
+
     } catch (err) {
       console.error('[DB] 数据库初始化失败: ' + JSON.stringify(err));
     }
@@ -68,7 +78,8 @@ export class TaskStore {
       'content': task.content,
       'time': task.time,
       'timestamp': task.timestamp,
-      'tags': JSON.stringify(task.tags) // 【核心技巧】：数组转字符串
+      'tags': JSON.stringify(task.tags), // 【核心技巧】：数组转字符串
+      'isCompleted': task.isCompleted ? 1 : 0
     };
 
     try {
@@ -99,6 +110,27 @@ export class TaskStore {
     }
   }
 
+  // 更新任务完成状态
+  public async updateTaskCompletion(taskId: string, isCompleted: boolean): Promise<boolean> {
+    if (!this.rdbStore) return false;
+    
+    const valueBucket: relationalStore.ValuesBucket = {
+      'isCompleted': isCompleted ? 1 : 0
+    };
+    
+    let predicates = new relationalStore.RdbPredicates(TABLE_NAME);
+    predicates.equalTo('id', taskId);
+    
+    try {
+      let rows = await this.rdbStore.update(valueBucket, predicates);
+      console.info(`[DB] 成功更新任务状态: taskId=${taskId}, isCompleted=${isCompleted}`);
+      return rows > 0;
+    } catch (err) {
+      console.error('[DB] 更新任务状态失败: ' + JSON.stringify(err));
+      return false;
+    }
+  }
+
 
   // 查：获取所有任务
   public async queryAllTasks(): Promise<TaskItem[]> {
@@ -112,7 +144,7 @@ export class TaskStore {
 
     try {
       // 执行查询，拿到结果集 (ResultSet)
-      let resultSet = await this.rdbStore.query(predicates, ['id', 'content', 'time', 'timestamp', 'tags']);
+      let resultSet = await this.rdbStore.query(predicates, ['id', 'content', 'time', 'timestamp', 'tags', 'isCompleted']);
 
       // 遍历结果集游标，组装成对象数组
       while (resultSet.goToNextRow()) {
@@ -121,6 +153,8 @@ export class TaskStore {
         let time = resultSet.getString(resultSet.getColumnIndex('time'));
         let timestamp = resultSet.getLong(resultSet.getColumnIndex('timestamp'));
         let tagsStr = resultSet.getString(resultSet.getColumnIndex('tags'));
+        let isCompletedNum = resultSet.getLong(resultSet.getColumnIndex('isCompleted'));
+        let isCompleted = isCompletedNum === 1;
 
         let tags: string[] = [];
         try {
@@ -129,7 +163,7 @@ export class TaskStore {
           console.warn('[DB] Tags 解析失败，使用空数组');
         }
 
-        tasks.push(new TaskItem(id, content, time, timestamp, tags));
+        tasks.push(new TaskItem(id, content, time, timestamp, tags, isCompleted));
       }
 
       // 释放结果集内存 (极其重要！否则会导致内存泄漏)
@@ -195,7 +229,7 @@ export class TaskStore {
     }
 
     let whereClause = conditions.join(' AND ');
-    let sql = 'SELECT id, content, time, timestamp, tags FROM ' + TABLE_NAME + ' WHERE ' + whereClause + ' ORDER BY timestamp DESC';
+    let sql = 'SELECT id, content, time, timestamp, tags, isCompleted FROM ' + TABLE_NAME + ' WHERE ' + whereClause + ' ORDER BY timestamp DESC';
 
     try {
       let resultSet = await this.rdbStore.querySql(sql, args);
@@ -206,6 +240,8 @@ export class TaskStore {
         let time = resultSet.getString(resultSet.getColumnIndex('time'));
         let timestamp = resultSet.getLong(resultSet.getColumnIndex('timestamp'));
         let tagsStr = resultSet.getString(resultSet.getColumnIndex('tags'));
+        let isCompletedNum = resultSet.getLong(resultSet.getColumnIndex('isCompleted'));
+        let isCompleted = isCompletedNum === 1;
 
         let parsedTags: string[] = [];
         try {
@@ -214,7 +250,7 @@ export class TaskStore {
           console.warn('[DB] Tags 解析失败');
         }
 
-        tasks.push(new TaskItem(id, content, time, timestamp, parsedTags));
+        tasks.push(new TaskItem(id, content, time, timestamp, parsedTags, isCompleted));
       }
 
       resultSet.close();

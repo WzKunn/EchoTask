@@ -8,20 +8,21 @@
         "description" : "this is AddTaskPage"
       }
     },
-    {
-      "name": "ChatPage",
-      "pageSourceFile": "src/main/ets/pages/ChatPage.ets",
-      "buildFunction": "ChatPageBuilder",
-      "data": {
-        "description" : "this is ChatPage"
-      }
-    },
+
     {
       "name": "SearchPage",
       "pageSourceFile": "src/main/ets/pages/SearchPage.ets",
       "buildFunction": "SearchPageBuilder",
       "data": {
         "description" : "this is SearchPage"
+      }
+    },
+    {
+      "name": "InsightsPage",
+      "pageSourceFile": "src/main/ets/pages/InsightsPage.ets",
+      "buildFunction": "InsightsPageBuilder",
+      "data": {
+        "description": "this is InsightsPage"
       }
     }
   ]

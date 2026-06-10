@@ -6,20 +6,21 @@ import { abilityAccessCtrl, common, Permissions } from '@kit.AbilityKit';
 import { taskStore } from '../utils/TaskStore';
 import { TimeUtils } from '../utils/TimeUtils';
 
-// 数据模型 日程任务
 export class TaskItem {
   public id: string;
   public content: string;   // 任务内容
   public time: string;      // UI 展示用的友好时间文案（如"明天 14:00"）
   public timestamp: number; // Unix 毫秒时间戳，用于排序和搜索
   public tags: string[];    // 自动提取的标签
+  public isCompleted: boolean; // 是否已完成
 
-  constructor(id: string, content: string, time: string, timestamp: number, tags: string[]) {
+  constructor(id: string, content: string, time: string, timestamp: number, tags: string[], isCompleted: boolean = false) {
     this.id = id;
     this.content = content;
     this.time = time;
     this.timestamp = timestamp;
     this.tags = tags;
+    this.isCompleted = isCompleted;
   }
 }
 
@@ -88,6 +89,37 @@ export struct HomeView {
   // 自定义左滑按钮
   @Builder swipeActionsBuilder(task: TaskItem) {
     Row({ space: 8 }) {
+      // 完成/撤销 按钮
+      Column({ space: 4 }) {
+        SymbolGlyph($r(task.isCompleted ? 'sys.symbol.arrow_left' : 'sys.symbol.checkmark_circle'))
+          .fontSize(20)
+          .fontColor([Color.White])
+
+        Text(task.isCompleted ? '撤销' : '完成')
+          .fontSize(10)
+          .fontColor(Color.White)
+      }
+      .width(56)
+      .height(56)
+      .justifyContent(FlexAlign.Center)
+      .alignItems(HorizontalAlign.Center)
+      .backgroundColor(task.isCompleted ? '#f59e0b' : '#10b981')
+      .borderRadius(14)
+      .shadow({ radius: 8, color: task.isCompleted ? 'rgba(245,158,11,0.3)' : 'rgba(16,185,129,0.3)', offsetY: 2 })
+      .onClick(async () => {
+        let newState = !task.isCompleted;
+        // 更新数据库
+        await taskStore.updateTaskCompletion(task.id, newState);
+        // 内存更新
+        let currentTasks = AppStorage.get<TaskItem[]>('taskList') || [];
+        let index = currentTasks.findIndex(t => t.id === task.id);
+        if (index !== -1) {
+          currentTasks[index].isCompleted = newState;
+          AppStorage.setOrCreate('taskList', [...currentTasks]);
+        }
+        promptAction.showToast({ message: newState ? '任务已完成！' : '已恢复为未完成' });
+      })
+
       // 添加至日历按钮
       Column({ space: 4 }) {
         SymbolGlyph($r('sys.symbol.calendar_badge_plus'))
@@ -133,9 +165,7 @@ export struct HomeView {
       .borderRadius(14)
       .shadow({ radius: 8, color: 'rgba(239,68,68,0.3)', offsetY: 2 })
       .onClick(async () => {
-        // 1. 先从数据库中永久删除
         await taskStore.deleteTask(task.id);
-        // 2. 再从内存中移除，触发 UI 刷新
         let currentTasks = AppStorage.get<TaskItem[]>('taskList') || [];
         let updatedTasks = currentTasks.filter(t => t.id !== task.id);
         AppStorage.setOrCreate('taskList', updatedTasks);
@@ -167,7 +197,7 @@ export struct HomeView {
               end: this.swipeActionsBuilder(item),
               edgeEffect: SwipeEdgeEffect.Spring
             })
-          }, (item: TaskItem) => item.id)
+          }, (item: TaskItem) => item.id + '_' + item.isCompleted) // 核心：把 isCompleted 加入 key 强制重绘
         }
         .width('100%')
         .layoutWeight(1)
@@ -177,16 +207,21 @@ export struct HomeView {
       .height('100%')
       .padding({ left: 24, right: 24 })
 
-      // --- 底部双按钮区域 ---
-      Row({ space: 20 }) {
-        // 按钮 1：添加日程
-        this.IconButton('添加日程', 'sys.symbol.plus', '#3b82f6', () => {
+      // --- 底部三按钮区域 ---
+      Row({ space: 30 }) {
+        // 左侧：搜索回溯
+        this.IconButton('搜索', 'sys.symbol.magnifyingglass', '#64748b', 50, () => {
+          this.pathStack.pushPathByName('SearchPage', null);
+        })
+
+        // 中间：添加日程 (稍微大一点)
+        this.IconButton('添加', 'sys.symbol.plus', '#3b82f6', 64, () => {
           this.pathStack.pushPathByName('AddTaskPage', null);
         })
 
-        // 按钮 2：搜索日程
-        this.IconButton('搜索回溯', 'sys.symbol.magnifyingglass', '#64748b', () => {
-          this.pathStack.pushPathByName('SearchPage', null);
+        // 右侧：统计洞察
+        this.IconButton('洞察', 'sys.symbol.compass', '#8b5cf6', 50, () => {
+          this.pathStack.pushPathByName('InsightsPage', null);
         })
       }
       .width('100%')
@@ -204,12 +239,12 @@ export struct HomeView {
     .padding({ left: 20, right: 24 })
   }
 
-  @Builder IconButton(text: string, icon: string, color: string, action: () => void) {
+  @Builder IconButton(text: string, icon: string, color: string, size: number, action: () => void) {
     Column() {
       Button({ type: ButtonType.Circle }) {
-        SymbolGlyph($r(icon)).fontSize(24).fontColor([Color.White])
+        SymbolGlyph($r(icon)).fontSize(size * 0.4).fontColor([Color.White])
       }
-      .width(60).height(60)
+      .width(size).height(size)
       .backgroundColor(color)
       .shadow({ radius: 15, color: 'rgba(0,0,0,0.1)', offsetY: 8 })
       .onClick(action)
@@ -220,40 +255,52 @@ export struct HomeView {
 
   // 任务卡片 UI
   @Builder TaskCard(item: TaskItem) {
-    Column() {
-      Row() {
-        Text(item.content)
-          .fontSize(18)
-          .fontWeight(FontWeight.Medium)
-          .fontColor('#1e293b')
-          .layoutWeight(1)
+    Stack({ alignContent: Alignment.TopEnd }) {
+      Column() {
+        Row() {
+          Text(item.content)
+            .fontSize(18)
+            .fontWeight(FontWeight.Medium)
+            .fontColor(item.isCompleted ? '#94a3b8' : '#1e293b') // 完成后变灰
+            .decoration({ type: item.isCompleted ? TextDecorationType.LineThrough : TextDecorationType.None }) // 完成后增加删除线
+            .layoutWeight(1)
+        }
+        .width('100%')
+
+        Row() {
+          Text(TimeUtils.formatTimestamp(item.timestamp))
+            .fontSize(13)
+            .fontColor('#64748b')
+
+          Blank()
+
+          ForEach(item.tags, (tag: string) => {
+            Text(tag)
+              .fontSize(10)
+              .fontColor(item.isCompleted ? '#94a3b8' : '#3b82f6')
+              .backgroundColor(item.isCompleted ? '#f1f5f9' : '#eff6ff')
+              .padding({ left: 8, right: 8, top: 2, bottom: 2 })
+              .borderRadius(4)
+              .margin({ left: 4 })
+          })
+        }
+        .width('100%')
+        .margin({ top: 10 })
       }
       .width('100%')
 
-      Row() {
-        Text(TimeUtils.formatTimestamp(item.timestamp))
-          .fontSize(13)
-          .fontColor('#64748b')
-
-        Blank()
-
-        ForEach(item.tags, (tag: string) => {
-          Text(tag)
-            .fontSize(10)
-            .fontColor('#3b82f6')
-            .backgroundColor('#eff6ff')
-            .padding({ left: 8, right: 8, top: 2, bottom: 2 })
-            .borderRadius(4)
-            .margin({ left: 4 })
-        })
+      if (item.isCompleted) {
+        SymbolGlyph($r('sys.symbol.checkmark_circle_fill'))
+          .fontSize(32)
+          .fontColor(['rgba(16, 185, 129, 0.2)']) // 浅绿色的水印效果
+          .margin({ top: -10, right: -10 })
       }
-      .width('100%')
-      .margin({ top: 10 })
     }
     .padding(20)
     .backgroundColor(Color.White)
     .borderRadius(20)
     .shadow({ radius: 8, color: 'rgba(0,0,0,0.05)', offsetY: 4 })
+    .opacity(item.isCompleted ? 0.7 : 1) // 完成的卡片整体降低透明度
   }
 
   @Builder VoiceButton() {
@@ -373,6 +420,13 @@ export class LazyDataSource<T> implements IDataSource {
     this.elements = items;
     // 核心：调用 onDataReloaded 通知 LazyForEach 重新加载所有数据
     this.listeners.forEach(listener => listener.onDataReloaded());
+  }
+
+  public changeItem(index: number, item: T): void {
+    if (index >= 0 && index < this.elements.length) {
+      this.elements[index] = item;
+      this.listeners.forEach(listener => listener.onDataChange(index));
+    }
   }
 
   public registerDataChangeListener(listener: DataChangeListener): void { this.listeners.add(listener); }

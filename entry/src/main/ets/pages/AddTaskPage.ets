@@ -6,6 +6,7 @@ import { TaskItem } from '../pages/HomeView';
 import { taskStore } from '../utils/TaskStore';
 import { TimeUtils } from '../utils/TimeUtils';
 import { IntentManager } from '../utils/IntentManager';
+import { window } from '@kit.ArkUI';
 
 @Builder
 export function AddTaskPageBuilder() {
@@ -286,8 +287,15 @@ struct AddTaskPage {
       }
       .width('100%')
       .height('100%')
-      .backgroundColor('#F8FAFC')
     }
+    .linearGradient({
+      direction: GradientDirection.LeftTop,
+      colors: [
+        ['#F0F9FF', 0.0],
+        ['#E0F2FE', 0.4],
+        ['#F9FAFB', 0.9]
+      ]
+    })
     .title('新日程')
     .onReady((context: NavDestinationContext) => {
       this.pathStack = context.pathStack;

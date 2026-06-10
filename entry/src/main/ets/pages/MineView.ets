@@ -308,6 +308,20 @@ export struct MineView {
             .width('100%')
             .padding({ left: 16, right: 16, bottom: 16 })
           }
+
+          // 提示文字说明
+          Column({ space: 4 }) {
+            Text(this.useCloudModel ? '1、应用会调用API进行文字解析以提供更精准的日程服务。' : '1、未开启此功能时语音输入添加日程体验可能不佳。')
+              .fontSize(11)
+              .fontColor('#94a3b8')
+            Text(this.useCloudModel ? '2、提供AI对话功能。' : '2、无法使用AI对话功能。')
+              .fontSize(11)
+              .fontColor('#94a3b8')
+          }
+          .width('100%')
+          .alignItems(HorizontalAlign.Start)
+          .padding({ left: 16, right: 16, bottom: 16, top: this.useCloudModel ? 0 : 4 })
+
         }
         .width('100%')
         .backgroundColor(Color.White)

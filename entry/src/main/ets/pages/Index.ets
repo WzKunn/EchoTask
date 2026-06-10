@@ -1,4 +1,5 @@
 import { HomeView } from './HomeView'
+import { ChatView } from './ChatPage'
 import { MineView } from './MineView'
 
 // 导航栏 Tab 项的数据结构
@@ -18,7 +19,8 @@ struct Index {
 
   // Tab 配置：统一管理图标和文案
   private tabItems: TabItemInfo[] = [
-    { label: '探索', icon: 'sys.symbol.house', activeIcon: 'sys.symbol.house_fill' },
+    { label: '日程', icon: 'sys.symbol.house', activeIcon: 'sys.symbol.house_fill' },
+    { label: '对话', icon: 'sys.symbol.message', activeIcon: 'sys.symbol.message_fill' },
     { label: '我的', icon: 'sys.symbol.person', activeIcon: 'sys.symbol.person_fill' }
   ];
 
@@ -42,6 +44,8 @@ struct Index {
       Navigation(this.pathStack) {
         if (this.currentIndex === 0) {
           HomeView({ pathStack: this.pathStack })
+        } else if (this.currentIndex === 1) {
+          ChatView()
         } else {
           MineView()
         }
@@ -95,6 +99,7 @@ struct Index {
         .scale({ x: this.currentIndex === index ? 1.05 : 1.0, y: this.currentIndex === index ? 1.05 : 1.0 })
         .onClick(() => {
           this.currentIndex = index;
+          this.pathStack.clear();
         })
       })
     }

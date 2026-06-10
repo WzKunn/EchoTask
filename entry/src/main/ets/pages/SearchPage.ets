@@ -3,6 +3,7 @@ import { TaskItem } from './HomeView';
 import { NLPUtils, SearchIntent } from '../utils/NLPUtils';
 import { taskStore } from '../utils/TaskStore';
 import { TimeUtils } from '../utils/TimeUtils';
+import { window } from '@kit.ArkUI';
 
 @Builder
 export function SearchPageBuilder() {
@@ -147,8 +148,15 @@ struct SearchPage {
       }
       .width('100%')
       .height('100%')
-      .backgroundColor('#F8FAFC')
     }
+    .linearGradient({
+      direction: GradientDirection.LeftTop,
+      colors: [
+        ['#F0F9FF', 0.0],
+        ['#E0F2FE', 0.4],
+        ['#F9FAFB', 0.9]
+      ]
+    })
     .title('搜索回溯')
     .onReady((context: NavDestinationContext) => {
       this.pathStack = context.pathStack;
