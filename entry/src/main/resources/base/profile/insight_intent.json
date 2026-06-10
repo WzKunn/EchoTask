@@ -11,6 +11,12 @@
           "foreground"
         ]
       }
+    },
+    {
+      "intentName": "ViewTaskWidget",
+      "domain": "ScheduleDomain",
+      "intentVersion": "1.0.0",
+      "srcEntry": "./ets/entryformability/EntryFormAbility.ets"
     }
   ]
 }

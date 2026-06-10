@@ -1,4 +1,8 @@
 import { promptAction } from '@kit.ArkUI';
+import picker from '@ohos.file.picker';
+import cameraPicker from '@ohos.multimedia.cameraPicker';
+import camera from '@ohos.multimedia.camera';
+import common from '@ohos.app.ability.common';
 import { taskStore } from '../utils/TaskStore';
 
 // 设置项数据结构
@@ -13,6 +17,7 @@ export struct MineView {
   // 个人信息持久化
   @StorageLink('userNickname') userNickname: string = 'EchoTask 用户';
   @StorageLink('userSignature') userSignature: string = '用声音管理生活 ✨';
+  @StorageLink('userAvatarUri') userAvatarUri: string = '';
 
   // 云端模型配置
   @StorageLink('useCloudModel') useCloudModel: boolean = false;
@@ -85,19 +90,31 @@ export struct MineView {
               .stroke('#dbeafe')
               .strokeWidth(3)
 
-            // 头像背景圆
-            Circle()
-              .width(84)
-              .height(84)
-              .fill('#eff6ff')
+            if (this.userAvatarUri) {
+              Image(this.userAvatarUri)
+                .width(84)
+                .height(84)
+                .borderRadius(42)
+                .objectFit(ImageFit.Cover)
+            } else {
+              // 头像背景圆
+              Circle()
+                .width(84)
+                .height(84)
+                .fill('#eff6ff')
 
-            // 系统人物图标
-            SymbolGlyph($r('sys.symbol.person_crop_circle_fill'))
-              .fontSize(52)
-              .fontColor(['#3b82f6'])
+              // 系统人物图标
+              SymbolGlyph($r('sys.symbol.person_crop_circle_fill'))
+                .fontSize(52)
+                .fontColor(['#3b82f6'])
+            }
           }
           .width(96)
           .height(96)
+          .margin({ top: 24 })
+          .onClick(() => {
+            this.showAvatarPicker();
+          })
           .margin({ top: 24 })
 
           // 昵称区域
@@ -432,6 +449,62 @@ export struct MineView {
     .height('100%')
     .scrollBar(BarState.Off)
     .edgeEffect(EdgeEffect.Spring)
+  }
+
+  showAvatarPicker() {
+    ActionSheet.show({
+      title: '修改头像',
+      message: '请选择获取头像的方式',
+      autoCancel: true,
+      alignment: DialogAlignment.Bottom,
+      offset: { dx: 0, dy: -20 },
+      sheets: [
+        {
+          title: '拍照',
+          action: () => {
+            this.takePhoto();
+          }
+        },
+        {
+          title: '从相册选择',
+          action: () => {
+            this.pickFromAlbum();
+          }
+        }
+      ]
+    });
+  }
+
+  async pickFromAlbum() {
+    try {
+      let photoPicker = new picker.PhotoViewPicker();
+      let pickOptions = new picker.PhotoSelectOptions();
+      pickOptions.MIMEType = picker.PhotoViewMIMETypes.IMAGE_TYPE;
+      pickOptions.maxSelectNumber = 1;
+      let photoSelectResult = await photoPicker.select(pickOptions);
+      if (photoSelectResult && photoSelectResult.photoUris && photoSelectResult.photoUris.length > 0) {
+        this.userAvatarUri = photoSelectResult.photoUris[0];
+      }
+    } catch (err) {
+      console.error('Failed to pick from album', err);
+      promptAction.showToast({ message: '打开相册失败' });
+    }
+  }
+
+  async takePhoto() {
+    try {
+      let context = getContext(this) as common.Context;
+      let pickerProfile: cameraPicker.PickerProfile = {
+        cameraPosition: camera.CameraPosition.CAMERA_POSITION_BACK
+      };
+      let pickerResult = await cameraPicker.pick(context, [cameraPicker.PickerMediaType.PHOTO], pickerProfile);
+      if (pickerResult && pickerResult.resultUri) {
+        this.userAvatarUri = pickerResult.resultUri;
+      }
+    } catch (err) {
+      console.error('Failed to take photo', err);
+      promptAction.showToast({ message: '打开相机失败' });
+    }
   }
 
   // 通用设置行（带 Toggle）
