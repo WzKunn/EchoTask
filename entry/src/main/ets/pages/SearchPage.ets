@@ -13,6 +13,7 @@ export function SearchPageBuilder() {
 @Component
 struct SearchPage {
   pathStack: NavPathStack = new NavPathStack();
+  @StorageProp('isDarkMode') isDarkMode: boolean = false;
   @State searchText: string = '';
   @State searchResults: TaskItem[] = [];
   @State isSearching: boolean = false;
@@ -27,7 +28,7 @@ struct SearchPage {
           TextInput({ placeholder: '搜索日程，如"上周关于代码的事"', text: this.searchText })
             .layoutWeight(1)
             .height(44)
-            .backgroundColor('rgba(255,255,255,0.9)')
+            .backgroundColor($r('app.color.search_input_bg'))
             .borderRadius(16)
             .padding({ left: 16, right: 16 })
             .onChange((value: string) => {
@@ -45,7 +46,7 @@ struct SearchPage {
           .type(ButtonType.Circle)
           .width(44)
           .height(44)
-          .backgroundColor('#3b82f6')
+          .backgroundColor($r('app.color.brand_primary'))
           .margin({ left: 10 })
           .onClick(() => {
             this.executeSearch();
@@ -60,10 +61,10 @@ struct SearchPage {
             LoadingProgress()
               .width(40)
               .height(40)
-              .color('#3b82f6')
+              .color($r('app.color.brand_primary'))
             Text('AI 正在理解你的搜索意图...')
               .fontSize(14)
-              .fontColor('#94a3b8')
+              .fontColor($r('app.color.text_secondary'))
               .margin({ top: 12 })
           }
           .width('100%')
@@ -75,16 +76,16 @@ struct SearchPage {
           Column() {
             SymbolGlyph($r('sys.symbol.magnifyingglass'))
               .fontSize(50)
-              .fontColor(['#cbd5e1'])
+              .fontColor([$r('app.color.text_tertiary')])
 
             Text('没有找到匹配的日程')
               .fontSize(16)
-              .fontColor('#94a3b8')
+              .fontColor($r('app.color.text_secondary'))
               .margin({ top: 16 })
 
             Text('试试换个说法？如"本周""关于学习的"')
               .fontSize(13)
-              .fontColor('#cbd5e1')
+              .fontColor($r('app.color.text_tertiary'))
               .margin({ top: 8 })
           }
           .width('100%')
@@ -96,7 +97,7 @@ struct SearchPage {
           Column() {
             Text('找到 ' + this.searchResults.length + ' 条结果')
               .fontSize(13)
-              .fontColor('#94a3b8')
+              .fontColor($r('app.color.text_secondary'))
               .margin({ left: 24, bottom: 10 })
               .width('100%')
 
@@ -120,11 +121,11 @@ struct SearchPage {
           Column() {
             SymbolGlyph($r('sys.symbol.magnifyingglass'))
               .fontSize(50)
-              .fontColor(['#cbd5e1'])
+              .fontColor([$r('app.color.text_tertiary')])
 
             Text('输入自然语言搜索你的日程')
               .fontSize(16)
-              .fontColor('#94a3b8')
+              .fontColor($r('app.color.text_secondary'))
               .margin({ top: 16 })
 
             // 快捷搜索标签
@@ -152,9 +153,9 @@ struct SearchPage {
     .linearGradient({
       direction: GradientDirection.LeftTop,
       colors: [
-        ['#F0F9FF', 0.0],
-        ['#E0F2FE', 0.4],
-        ['#F9FAFB', 0.9]
+        [$r('app.color.page_gradient_start'), 0.0],
+        [$r('app.color.page_gradient_start'), 0.4],
+        [$r('app.color.page_gradient_end'), 0.9]
       ]
     })
     .title('搜索回溯')
@@ -167,8 +168,8 @@ struct SearchPage {
   @Builder QuickTag(text: string) {
     Text(text)
       .fontSize(13)
-      .fontColor('#3b82f6')
-      .backgroundColor('#eff6ff')
+      .fontColor($r('app.color.brand_primary'))
+      .backgroundColor($r('app.color.brand_primary_bg'))
       .padding({ left: 14, right: 14, top: 8, bottom: 8 })
       .borderRadius(20)
       .onClick(() => {
@@ -184,7 +185,7 @@ struct SearchPage {
         Text(item.content)
           .fontSize(17)
           .fontWeight(FontWeight.Medium)
-          .fontColor('#1e293b')
+          .fontColor($r('app.color.text_primary'))
           .layoutWeight(1)
       }
       .width('100%')
@@ -192,15 +193,15 @@ struct SearchPage {
       Row() {
         Text(TimeUtils.formatTimestamp(item.timestamp))
           .fontSize(13)
-          .fontColor('#64748b')
+          .fontColor($r('app.color.text_secondary'))
 
         Blank()
 
         ForEach(item.tags, (tag: string) => {
           Text(tag)
             .fontSize(10)
-            .fontColor('#3b82f6')
-            .backgroundColor('#eff6ff')
+            .fontColor($r('app.color.brand_primary'))
+            .backgroundColor($r('app.color.brand_primary_bg'))
             .padding({ left: 8, right: 8, top: 2, bottom: 2 })
             .borderRadius(4)
             .margin({ left: 4 })
@@ -210,7 +211,7 @@ struct SearchPage {
       .margin({ top: 10 })
     }
     .padding(18)
-    .backgroundColor(Color.White)
+    .backgroundColor($r('app.color.card_bg'))
     .borderRadius(16)
     .shadow({ radius: 8, color: 'rgba(0,0,0,0.05)', offsetY: 4 })
   }

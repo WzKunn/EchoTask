@@ -10,6 +10,7 @@ export function InsightsPageBuilder() {
 
 @Component
 export struct InsightsPage {
+  @StorageProp('isDarkMode') isDarkMode: boolean = false;
   @State totalTasks: number = 0;
   @State completedTasks: number = 0;
   @State pendingTasks: number = 0;
@@ -43,43 +44,43 @@ export struct InsightsPage {
           })
           .width('100%')
           .height(100)
-          .valueColors(['#10b981', '#e2e8f0']) // 绿色和浅灰色
+          .valueColors([$r('app.color.success_color'), $r('app.color.divider_color')]) // 绿色和浅灰色
 
           Column() {
             Text(this.completionRate + '%')
               .fontSize(36)
               .fontWeight(FontWeight.Bolder)
-              .fontColor('#10b981')
+              .fontColor($r('app.color.success_color'))
             Text('完成率')
               .fontSize(12)
-              .fontColor('#64748b')
+              .fontColor($r('app.color.text_secondary'))
           }
         }
         .width('100%')
         .padding(20)
-        .backgroundColor(Color.White)
+        .backgroundColor($r('app.color.card_bg'))
         .borderRadius(20)
         .shadow({ radius: 10, color: 'rgba(0,0,0,0.05)', offsetY: 5 })
 
         // 数据卡片：总览
         Row({ space: 15 }) {
           Column() {
-            Text('总任务数').fontSize(13).fontColor('#64748b').margin({ bottom: 8 })
-            Text(this.totalTasks.toString()).fontSize(28).fontWeight(FontWeight.Bold).fontColor('#3b82f6')
+            Text('总任务数').fontSize(13).fontColor($r('app.color.text_secondary')).margin({ bottom: 8 })
+            Text(this.totalTasks.toString()).fontSize(28).fontWeight(FontWeight.Bold).fontColor($r('app.color.brand_primary'))
           }
-          .layoutWeight(1).padding(20).backgroundColor(Color.White).borderRadius(16).shadow({ radius: 8, color: 'rgba(0,0,0,0.04)', offsetY: 4 }).alignItems(HorizontalAlign.Center)
+          .layoutWeight(1).padding(20).backgroundColor($r('app.color.card_bg')).borderRadius(16).shadow({ radius: 8, color: 'rgba(0,0,0,0.04)', offsetY: 4 }).alignItems(HorizontalAlign.Center)
 
           Column() {
-            Text('待办任务').fontSize(13).fontColor('#64748b').margin({ bottom: 8 })
-            Text(this.pendingTasks.toString()).fontSize(28).fontWeight(FontWeight.Bold).fontColor('#f59e0b')
+            Text('待办任务').fontSize(13).fontColor($r('app.color.text_secondary')).margin({ bottom: 8 })
+            Text(this.pendingTasks.toString()).fontSize(28).fontWeight(FontWeight.Bold).fontColor($r('app.color.warning_color'))
           }
-          .layoutWeight(1).padding(20).backgroundColor(Color.White).borderRadius(16).shadow({ radius: 8, color: 'rgba(0,0,0,0.04)', offsetY: 4 }).alignItems(HorizontalAlign.Center)
+          .layoutWeight(1).padding(20).backgroundColor($r('app.color.card_bg')).borderRadius(16).shadow({ radius: 8, color: 'rgba(0,0,0,0.04)', offsetY: 4 }).alignItems(HorizontalAlign.Center)
 
           Column() {
-            Text('已完成').fontSize(13).fontColor('#64748b').margin({ bottom: 8 })
-            Text(this.completedTasks.toString()).fontSize(28).fontWeight(FontWeight.Bold).fontColor('#10b981')
+            Text('已完成').fontSize(13).fontColor($r('app.color.text_secondary')).margin({ bottom: 8 })
+            Text(this.completedTasks.toString()).fontSize(28).fontWeight(FontWeight.Bold).fontColor($r('app.color.success_color'))
           }
-          .layoutWeight(1).padding(20).backgroundColor(Color.White).borderRadius(16).shadow({ radius: 8, color: 'rgba(0,0,0,0.04)', offsetY: 4 }).alignItems(HorizontalAlign.Center)
+          .layoutWeight(1).padding(20).backgroundColor($r('app.color.card_bg')).borderRadius(16).shadow({ radius: 8, color: 'rgba(0,0,0,0.04)', offsetY: 4 }).alignItems(HorizontalAlign.Center)
         }
         .width('100%')
         .justifyContent(FlexAlign.SpaceBetween)
@@ -89,14 +90,14 @@ export struct InsightsPage {
           Text('近期完成里程碑')
             .fontSize(18)
             .fontWeight(FontWeight.Bold)
-            .fontColor('#1e293b')
+            .fontColor($r('app.color.text_primary'))
             .width('100%')
             .margin({ bottom: 15, top: 10 })
 
           if (this.recentTasks.length === 0) {
             Text('暂无已完成任务，继续加油！')
               .fontSize(14)
-              .fontColor('#94a3b8')
+              .fontColor($r('app.color.text_secondary'))
               .margin({ top: 20 })
           } else {
             List({ space: 10 }) {
@@ -105,17 +106,17 @@ export struct InsightsPage {
                   Row() {
                     SymbolGlyph($r('sys.symbol.checkmark_circle_fill'))
                       .fontSize(20)
-                      .fontColor(['#10b981'])
+                      .fontColor([$r('app.color.success_color')])
                       .margin({ right: 10 })
                     Column() {
                       Text(task.content)
                         .fontSize(16)
-                        .fontColor('#475569')
+                        .fontColor($r('app.color.text_primary'))
                         .maxLines(1)
                         .textOverflow({ overflow: TextOverflow.Ellipsis })
                       Text(TimeUtils.formatTimestamp(task.timestamp))
                         .fontSize(12)
-                        .fontColor('#94a3b8')
+                        .fontColor($r('app.color.text_secondary'))
                         .margin({ top: 4 })
                     }
                     .layoutWeight(1)
@@ -123,7 +124,7 @@ export struct InsightsPage {
                   }
                   .width('100%')
                   .padding(15)
-                  .backgroundColor(Color.White)
+                  .backgroundColor($r('app.color.card_bg'))
                   .borderRadius(12)
                   .shadow({ radius: 5, color: 'rgba(0,0,0,0.03)', offsetY: 2 })
                 }
@@ -145,9 +146,9 @@ export struct InsightsPage {
     .linearGradient({
       direction: GradientDirection.LeftTop,
       colors: [
-        ['#F0F9FF', 0.0],
-        ['#E0F2FE', 0.4],
-        ['#F9FAFB', 0.9]
+        [$r('app.color.page_gradient_start'), 0.0],
+        [$r('app.color.page_gradient_start'), 0.4],
+        [$r('app.color.page_gradient_end'), 0.9]
       ]
     })
     .title('数据洞察')

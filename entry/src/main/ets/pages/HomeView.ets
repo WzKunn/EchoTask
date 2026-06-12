@@ -29,6 +29,8 @@ export struct HomeView {
 
   pathStack : NavPathStack = new NavPathStack();
 
+  @StorageProp('isDarkMode') isDarkMode: boolean = false;
+
   @State dataSource: LazyDataSource<TaskItem> = new LazyDataSource();
   @State isListening: boolean = false;
   // 使用 StorageLink 绑定全局任务列表，实现跨页面同步
@@ -103,7 +105,7 @@ export struct HomeView {
       .height(56)
       .justifyContent(FlexAlign.Center)
       .alignItems(HorizontalAlign.Center)
-      .backgroundColor(task.isCompleted ? '#f59e0b' : '#10b981')
+      .backgroundColor(task.isCompleted ? $r('app.color.warning_color') : $r('app.color.success_color'))
       .borderRadius(14)
       .shadow({ radius: 8, color: task.isCompleted ? 'rgba(245,158,11,0.3)' : 'rgba(16,185,129,0.3)', offsetY: 2 })
       .onClick(async () => {
@@ -134,7 +136,7 @@ export struct HomeView {
       .height(56)
       .justifyContent(FlexAlign.Center)
       .alignItems(HorizontalAlign.Center)
-      .backgroundColor('#3b82f6')
+      .backgroundColor($r('app.color.brand_primary'))
       .borderRadius(14)
       .shadow({ radius: 8, color: 'rgba(59,130,246,0.3)', offsetY: 2 })
       .onClick(async () => {
@@ -161,7 +163,7 @@ export struct HomeView {
       .height(56)
       .justifyContent(FlexAlign.Center)
       .alignItems(HorizontalAlign.Center)
-      .backgroundColor('#ef4444')
+      .backgroundColor($r('app.color.danger_color'))
       .borderRadius(14)
       .shadow({ radius: 8, color: 'rgba(239,68,68,0.3)', offsetY: 2 })
       .onClick(async () => {
@@ -183,7 +185,7 @@ export struct HomeView {
       Column() {
         Text('EchoTask')
           .width('100%')
-          .fontColor('#1e3a8a')
+          .fontColor($r('app.color.text_primary'))
           .fontSize(32)
           .fontWeight(FontWeight.Bolder)
           .margin({ bottom: 20 })
@@ -210,12 +212,12 @@ export struct HomeView {
       // --- 底部三按钮区域 ---
       Row({ space: 30 }) {
         // 左侧：搜索回溯
-        this.IconButton('搜索', 'sys.symbol.magnifyingglass', '#64748b', 50, () => {
+        this.IconButton('搜索', 'sys.symbol.magnifyingglass', $r('app.color.text_secondary'), 50, () => {
           this.pathStack.pushPathByName('SearchPage', null);
         })
 
         // 中间：添加日程 (稍微大一点)
-        this.IconButton('添加', 'sys.symbol.plus', '#3b82f6', 64, () => {
+        this.IconButton('添加', 'sys.symbol.plus', $r('app.color.brand_primary'), 64, () => {
           this.pathStack.pushPathByName('AddTaskPage', null);
         })
 
@@ -239,7 +241,7 @@ export struct HomeView {
     .padding({ left: 20, right: 24 })
   }
 
-  @Builder IconButton(text: string, icon: string, color: string, size: number, action: () => void) {
+  @Builder IconButton(text: string, icon: string, color: ResourceColor, size: number, action: () => void) {
     Column() {
       Button({ type: ButtonType.Circle }) {
         SymbolGlyph($r(icon)).fontSize(size * 0.4).fontColor([Color.White])
@@ -249,7 +251,7 @@ export struct HomeView {
       .shadow({ radius: 15, color: 'rgba(0,0,0,0.1)', offsetY: 8 })
       .onClick(action)
 
-      Text(text).fontSize(12).margin({ top: 8 }).fontColor('#64748b')
+      Text(text).fontSize(12).margin({ top: 8 }).fontColor($r('app.color.text_secondary'))
     }
   }
 
@@ -261,7 +263,7 @@ export struct HomeView {
           Text(item.content)
             .fontSize(18)
             .fontWeight(FontWeight.Medium)
-            .fontColor(item.isCompleted ? '#94a3b8' : '#1e293b') // 完成后变灰
+            .fontColor(item.isCompleted ? $r('app.color.text_tertiary') : $r('app.color.text_primary')) // 完成后变灰
             .decoration({ type: item.isCompleted ? TextDecorationType.LineThrough : TextDecorationType.None }) // 完成后增加删除线
             .layoutWeight(1)
         }
@@ -270,15 +272,15 @@ export struct HomeView {
         Row() {
           Text(TimeUtils.formatTimestamp(item.timestamp))
             .fontSize(13)
-            .fontColor('#64748b')
+            .fontColor($r('app.color.text_secondary'))
 
           Blank()
 
           ForEach(item.tags, (tag: string) => {
             Text(tag)
               .fontSize(10)
-              .fontColor(item.isCompleted ? '#94a3b8' : '#3b82f6')
-              .backgroundColor(item.isCompleted ? '#f1f5f9' : '#eff6ff')
+              .fontColor(item.isCompleted ? $r('app.color.text_tertiary') : $r('app.color.brand_primary'))
+              .backgroundColor(item.isCompleted ? $r('app.color.app_bg') : $r('app.color.brand_primary_bg'))
               .padding({ left: 8, right: 8, top: 2, bottom: 2 })
               .borderRadius(4)
               .margin({ left: 4 })
@@ -297,7 +299,7 @@ export struct HomeView {
       }
     }
     .padding(20)
-    .backgroundColor(Color.White)
+    .backgroundColor($r('app.color.card_bg'))
     .borderRadius(20)
     .shadow({ radius: 8, color: 'rgba(0,0,0,0.05)', offsetY: 4 })
     .opacity(item.isCompleted ? 0.7 : 1) // 完成的卡片整体降低透明度
@@ -312,7 +314,7 @@ export struct HomeView {
       }
       .width(70)
       .height(70)
-      .backgroundColor(this.isListening ? '#ef4444' : '#3b82f6')
+      .backgroundColor(this.isListening ? $r('app.color.danger_color') : $r('app.color.brand_primary'))
       .shadow({ radius: 20, color: 'rgba(59, 130, 246, 0.4)', offsetY: 8 })
       .gesture(
         LongPressGesture()
@@ -346,7 +348,7 @@ export struct HomeView {
     Button() {
       SymbolGlyph($r('sys.symbol.trash'))
     }
-    .backgroundColor(Color.Red)
+    .backgroundColor($r('app.color.danger_color'))
     .onClick(() => this.dataSource.deleteItem(item))
   }
 

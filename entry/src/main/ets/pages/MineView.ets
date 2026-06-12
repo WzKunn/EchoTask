@@ -3,6 +3,7 @@ import picker from '@ohos.file.picker';
 import cameraPicker from '@ohos.multimedia.cameraPicker';
 import camera from '@ohos.multimedia.camera';
 import common from '@ohos.app.ability.common';
+import { ConfigurationConstant } from '@kit.AbilityKit';
 import { taskStore } from '../utils/TaskStore';
 
 // 设置项数据结构
@@ -37,6 +38,11 @@ export struct MineView {
 
   // 云端配置展开状态
   @State isCloudExpanded: boolean = false;
+
+  // 主题状态
+  @StorageLink('isDarkMode') isDarkMode: boolean = false;
+  // 防抖标志：防止 setColorMode 触发重建后 onChange 再次执行
+  private isTogglingTheme: boolean = false;
 
   async aboutToAppear() {
     // 加载统计数据
@@ -87,7 +93,7 @@ export struct MineView {
               .width(96)
               .height(96)
               .fill(Color.Transparent)
-              .stroke('#dbeafe')
+              .stroke($r('app.color.brand_border'))
               .strokeWidth(3)
 
             if (this.userAvatarUri) {
@@ -101,12 +107,12 @@ export struct MineView {
               Circle()
                 .width(84)
                 .height(84)
-                .fill('#eff6ff')
+                .fill($r('app.color.brand_primary_bg'))
 
               // 系统人物图标
               SymbolGlyph($r('sys.symbol.person_crop_circle_fill'))
                 .fontSize(52)
-                .fontColor(['#3b82f6'])
+                .fontColor([$r('app.color.brand_primary')])
             }
           }
           .width(96)
@@ -131,7 +137,7 @@ export struct MineView {
               Button('完成')
                 .fontSize(13)
                 .height(36)
-                .backgroundColor('#3b82f6')
+                .backgroundColor($r('app.color.brand_primary'))
                 .onClick(() => {
                   if (this.editNameText.trim().length > 0) {
                     this.userNickname = this.editNameText.trim();
@@ -145,7 +151,7 @@ export struct MineView {
             Text(this.userNickname)
               .fontSize(22)
               .fontWeight(FontWeight.Bold)
-              .fontColor('#1e293b')
+              .fontColor($r('app.color.text_primary'))
               .margin({ top: 14 })
               .onClick(() => {
                 this.editNameText = this.userNickname;
@@ -167,7 +173,7 @@ export struct MineView {
               Button('完成')
                 .fontSize(13)
                 .height(32)
-                .backgroundColor('#3b82f6')
+                .backgroundColor($r('app.color.brand_primary'))
                 .onClick(() => {
                   if (this.editSignText.trim().length > 0) {
                     this.userSignature = this.editSignText.trim();
@@ -180,7 +186,7 @@ export struct MineView {
           } else {
             Text(this.userSignature)
               .fontSize(14)
-              .fontColor('#94a3b8')
+              .fontColor($r('app.color.text_secondary'))
               .margin({ top: 6 })
               .onClick(() => {
                 this.editSignText = this.userSignature;
@@ -191,11 +197,11 @@ export struct MineView {
           // 提示文字
           Text('点击昵称或签名可编辑')
             .fontSize(11)
-            .fontColor('#cbd5e1')
+            .fontColor($r('app.color.text_tertiary'))
             .margin({ top: 4, bottom: 20 })
         }
         .width('100%')
-        .backgroundColor(Color.White)
+        .backgroundColor($r('app.color.card_bg'))
         .borderRadius(20)
         .shadow({ radius: 12, color: 'rgba(0,0,0,0.04)', offsetY: 4 })
         .alignItems(HorizontalAlign.Center)
@@ -209,11 +215,11 @@ export struct MineView {
             Text(this.totalTasks.toString())
               .fontSize(28)
               .fontWeight(FontWeight.Bold)
-              .fontColor('#3b82f6')
+              .fontColor($r('app.color.brand_primary'))
 
             Text('总任务数')
               .fontSize(12)
-              .fontColor('#94a3b8')
+              .fontColor($r('app.color.text_secondary'))
               .margin({ top: 4 })
           }
           .layoutWeight(1)
@@ -223,7 +229,7 @@ export struct MineView {
           Divider()
             .vertical(true)
             .height(40)
-            .color('#e2e8f0')
+            .color($r('app.color.divider_color'))
 
           // 连续使用天数
           Column() {
@@ -234,7 +240,7 @@ export struct MineView {
 
             Text('连续使用(天)')
               .fontSize(12)
-              .fontColor('#94a3b8')
+              .fontColor($r('app.color.text_secondary'))
               .margin({ top: 4 })
           }
           .layoutWeight(1)
@@ -242,7 +248,7 @@ export struct MineView {
         }
         .width('100%')
         .padding({ top: 20, bottom: 20 })
-        .backgroundColor(Color.White)
+        .backgroundColor($r('app.color.card_bg'))
         .borderRadius(20)
         .shadow({ radius: 12, color: 'rgba(0,0,0,0.04)', offsetY: 4 })
 
@@ -254,12 +260,12 @@ export struct MineView {
           Row() {
             SymbolGlyph($r('sys.symbol.gearshape'))
               .fontSize(18)
-              .fontColor(['#f59e0b'])
+              .fontColor([$r('app.color.warning_color')])
 
             Text('智能引擎')
               .fontSize(16)
               .fontWeight(FontWeight.Bold)
-              .fontColor('#1e293b')
+              .fontColor($r('app.color.text_primary'))
               .margin({ left: 8 })
           }
           .width('100%')
@@ -269,11 +275,11 @@ export struct MineView {
           Row() {
             SymbolGlyph($r('sys.symbol.cloud'))
               .fontSize(18)
-              .fontColor(['#3b82f6'])
+              .fontColor([$r('app.color.brand_primary')])
 
             Text('启用云端大模型解析')
               .fontSize(15)
-              .fontColor('#334155')
+              .fontColor($r('app.color.text_primary'))
               .margin({ left: 10 })
 
             Blank()
@@ -290,7 +296,7 @@ export struct MineView {
           // 云端配置展开区
           if (this.useCloudModel) {
             Column({ space: 12 }) {
-              Divider().color('#f1f5f9').margin({ bottom: 4 })
+              Divider().color($r('app.color.divider_color')).margin({ bottom: 4 })
 
               TextInput({ text: this.cloudApiModel, placeholder: '模型名称 (如 glm-4-flash)' })
                 .onChange((value: string) => { this.cloudApiModel = value; })
@@ -311,7 +317,7 @@ export struct MineView {
               Button('保存配置')
                 .width('100%')
                 .height(42)
-                .backgroundColor('#3b82f6')
+                .backgroundColor($r('app.color.brand_primary'))
                 .borderRadius(10)
                 .fontColor(Color.White)
                 .onClick(() => {
@@ -330,10 +336,10 @@ export struct MineView {
           Column({ space: 4 }) {
             Text(this.useCloudModel ? '1、应用会调用API进行文字解析以提供更精准的日程服务。' : '1、未开启此功能时语音输入添加日程体验可能不佳。')
               .fontSize(11)
-              .fontColor('#94a3b8')
+              .fontColor($r('app.color.text_secondary'))
             Text(this.useCloudModel ? '2、提供AI对话功能。' : '2、无法使用AI对话功能。')
               .fontSize(11)
-              .fontColor('#94a3b8')
+              .fontColor($r('app.color.text_secondary'))
           }
           .width('100%')
           .alignItems(HorizontalAlign.Start)
@@ -341,7 +347,7 @@ export struct MineView {
 
         }
         .width('100%')
-        .backgroundColor(Color.White)
+        .backgroundColor($r('app.color.card_bg'))
         .borderRadius(20)
         .shadow({ radius: 12, color: 'rgba(0,0,0,0.04)', offsetY: 4 })
 
@@ -358,38 +364,72 @@ export struct MineView {
             Text('通用设置')
               .fontSize(16)
               .fontWeight(FontWeight.Bold)
-              .fontColor('#1e293b')
+              .fontColor($r('app.color.text_primary'))
               .margin({ left: 8 })
           }
           .width('100%')
           .padding({ left: 16, top: 16, bottom: 8 })
 
-          // 主题切换
-          this.SettingRow('sys.symbol.circle_lefthalf_filled', '深色模式', '#f59e0b', true)
+          // 主题切换 —— 内联实现，不通过 @Builder 传参，避免值传递导致的状态回弹
+          Row() {
+            SymbolGlyph($r('sys.symbol.moon_fill'))
+              .fontSize(18)
+              .fontColor([$r('app.color.warning_color')])
 
-          Divider().color('#f1f5f9').margin({ left: 52, right: 16 })
+            Text('深色模式')
+              .fontSize(15)
+              .fontColor($r('app.color.text_primary'))
+              .margin({ left: 10 })
+
+            Blank()
+
+            Toggle({ type: ToggleType.Switch, isOn: this.isDarkMode })
+              .onChange((isOn: boolean) => {
+                // 防止 setColorMode 触发的重建再次进入此回调
+                if (this.isTogglingTheme) {
+                  return;
+                }
+                this.isTogglingTheme = true;
+                // 1. 先更新状态
+                this.isDarkMode = isOn;
+                AppStorage.set<boolean>('isDarkMode', isOn);
+                // 2. 延迟调用 setColorMode，让状态提交后再触发配置变更重建
+                setTimeout(() => {
+                  let applicationContext = getContext(this).getApplicationContext();
+                  applicationContext.setColorMode(isOn ? ConfigurationConstant.ColorMode.COLOR_MODE_DARK : ConfigurationConstant.ColorMode.COLOR_MODE_LIGHT);
+                  // 等重建完成后解锁
+                  setTimeout(() => {
+                    this.isTogglingTheme = false;
+                  }, 300);
+                }, 50);
+              })
+          }
+          .width('100%')
+          .padding({ left: 16, right: 16, top: 14, bottom: 14 })
+
+          Divider().color($r('app.color.divider_color')).margin({ left: 52, right: 16 })
 
           // 通知提醒
-          this.SettingRow('sys.symbol.bell', '通知提醒', '#10b981', true)
+          this.SettingRow('sys.symbol.bell', '通知提醒', $r('app.color.success_color'), true)
 
-          Divider().color('#f1f5f9').margin({ left: 52, right: 16 })
+          Divider().color($r('app.color.divider_color')).margin({ left: 52, right: 16 })
 
           // 清除缓存
           Row() {
             SymbolGlyph($r('sys.symbol.trash'))
               .fontSize(18)
-              .fontColor(['#ef4444'])
+              .fontColor([$r('app.color.danger_color')])
 
             Text('清除缓存')
               .fontSize(15)
-              .fontColor('#334155')
+              .fontColor($r('app.color.text_primary'))
               .margin({ left: 10 })
 
             Blank()
 
             SymbolGlyph($r('sys.symbol.chevron_right'))
               .fontSize(14)
-              .fontColor(['#cbd5e1'])
+              .fontColor([$r('app.color.text_tertiary')])
           }
           .width('100%')
           .padding({ left: 16, right: 16, top: 14, bottom: 14 })
@@ -398,7 +438,7 @@ export struct MineView {
           })
         }
         .width('100%')
-        .backgroundColor(Color.White)
+        .backgroundColor($r('app.color.card_bg'))
         .borderRadius(20)
         .shadow({ radius: 12, color: 'rgba(0,0,0,0.04)', offsetY: 4 })
 
@@ -409,12 +449,12 @@ export struct MineView {
           Row() {
             SymbolGlyph($r('sys.symbol.info_circle'))
               .fontSize(18)
-              .fontColor(['#64748b'])
+              .fontColor([$r('app.color.text_secondary')])
 
             Text('关于')
               .fontSize(16)
               .fontWeight(FontWeight.Bold)
-              .fontColor('#1e293b')
+              .fontColor($r('app.color.text_primary'))
               .margin({ left: 8 })
           }
           .width('100%')
@@ -423,19 +463,19 @@ export struct MineView {
           Row() {
             Text('版本号')
               .fontSize(15)
-              .fontColor('#334155')
+              .fontColor($r('app.color.text_primary'))
 
             Blank()
 
             Text('v1.0.0')
               .fontSize(14)
-              .fontColor('#94a3b8')
+              .fontColor($r('app.color.text_secondary'))
           }
           .width('100%')
           .padding({ left: 16, right: 16, top: 12, bottom: 16 })
         }
         .width('100%')
-        .backgroundColor(Color.White)
+        .backgroundColor($r('app.color.card_bg'))
         .borderRadius(20)
         .shadow({ radius: 12, color: 'rgba(0,0,0,0.04)', offsetY: 4 })
 
@@ -508,7 +548,7 @@ export struct MineView {
   }
 
   // 通用设置行（带 Toggle）
-  @Builder SettingRow(icon: string, label: string, iconColor: string, showToggle: boolean) {
+  @Builder SettingRow(icon: string, label: string, iconColor: ResourceColor, showToggle: boolean, isOn?: boolean, onToggle?: (isOn: boolean) => void) {
     Row() {
       SymbolGlyph($r(icon))
         .fontSize(18)
@@ -516,15 +556,19 @@ export struct MineView {
 
       Text(label)
         .fontSize(15)
-        .fontColor('#334155')
+        .fontColor($r('app.color.text_primary'))
         .margin({ left: 10 })
 
       Blank()
 
       if (showToggle) {
-        Toggle({ type: ToggleType.Switch, isOn: false })
-          .onChange(() => {
-            promptAction.showToast({ message: '功能开发中，敬请期待' });
+        Toggle({ type: ToggleType.Switch, isOn: isOn || false })
+          .onChange((val: boolean) => {
+            if (onToggle) {
+              onToggle(val);
+            } else {
+              promptAction.showToast({ message: '功能开发中，敬请期待' });
+            }
           })
       }
     }

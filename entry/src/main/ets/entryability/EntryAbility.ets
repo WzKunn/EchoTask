@@ -8,11 +8,6 @@ const DOMAIN = 0x0000;
 
 export default class EntryAbility extends UIAbility {
   async onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): Promise<void> {
-    try {
-      this.context.getApplicationContext().setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET);
-    } catch (err) {
-      hilog.error(DOMAIN, 'testTag', 'Failed to set colorMode. Cause: %{public}s', JSON.stringify(err));
-    }
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onCreate');
     try {
       // 【核心代码】：调用初始化，并把大门的通行证 this.context 传进去
@@ -21,17 +16,6 @@ export default class EntryAbility extends UIAbility {
     } catch (err) {
       console.error('EntryAbility 数据库初始化失败:', err);
     }
-
-    // 持久化储存api信息
-    PersistentStorage.persistProp('useCloudModel', false);
-    PersistentStorage.persistProp('cloudApiModel', '');
-    PersistentStorage.persistProp('cloudApiKey', '');
-    PersistentStorage.persistProp('cloudApiUrl', '');
-
-    // 持久化用户个人信息
-    PersistentStorage.persistProp('userNickname', 'EchoTask 用户');
-    PersistentStorage.persistProp('userSignature', '用声音管理生活 ✨');
-    PersistentStorage.persistProp('firstUseDate', '');
   }
 
   onDestroy(): void {
@@ -75,6 +59,34 @@ export default class EntryAbility extends UIAbility {
         hilog.error(DOMAIN, 'testTag', 'Failed to load the content. Cause: %{public}s', JSON.stringify(err));
         return;
       }
+
+      // 在 loadContent 回调内注册持久化属性（此时 Ace 容器已就绪，PersistentStorage 才能正常工作）
+      try {
+        PersistentStorage.persistProp('useCloudModel', false);
+        PersistentStorage.persistProp('cloudApiModel', '');
+        PersistentStorage.persistProp('cloudApiKey', '');
+        PersistentStorage.persistProp('cloudApiUrl', '');
+        PersistentStorage.persistProp('userNickname', 'EchoTask 用户');
+        PersistentStorage.persistProp('userSignature', '用声音管理生活 ✨');
+        PersistentStorage.persistProp('userAvatarUri', '');
+        PersistentStorage.persistProp('firstUseDate', '');
+        PersistentStorage.persistProp('isDarkMode', false);
+        hilog.info(DOMAIN, 'testTag', 'PersistentStorage initialized successfully.');
+      } catch (storageErr) {
+        hilog.error(DOMAIN, 'testTag', 'Failed to initialize PersistentStorage: %{public}s', JSON.stringify(storageErr));
+      }
+
+      // 持久化注册完成后，根据保存的深色模式状态设置系统颜色模式
+      try {
+        let isDarkMode = AppStorage.get<boolean>('isDarkMode');
+        hilog.info(DOMAIN, 'testTag', 'Restored isDarkMode = %{public}s', String(isDarkMode));
+        if (isDarkMode) {
+          this.context.getApplicationContext().setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_DARK);
+        }
+      } catch (colorErr) {
+        hilog.error(DOMAIN, 'testTag', 'Failed to set colorMode: %{public}s', JSON.stringify(colorErr));
+      }
+
       hilog.info(DOMAIN, 'testTag', 'Succeeded in loading the content.');
     });
   }

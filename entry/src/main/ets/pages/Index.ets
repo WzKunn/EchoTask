@@ -15,6 +15,8 @@ struct Index {
 
   pathStack: NavPathStack = new NavPathStack();
 
+  @StorageProp('isDarkMode') isDarkMode: boolean = false;
+
   @State currentIndex: number = 0
 
   // Tab 配置：统一管理图标和文案
@@ -31,14 +33,7 @@ struct Index {
       Row()
         .height('100%')
         .width('100%')
-        .linearGradient({
-          direction: GradientDirection.LeftTop,
-          colors: [
-            ['#F0F9FF', 0.0],
-            ['#E0F2FE', 0.4],
-            ['#F9FAFB', 0.9]
-          ]
-        })
+        .backgroundColor($r('app.color.brand_primary_bg'))
 
       // --- 主内容区 ---
       Navigation(this.pathStack) {
@@ -74,14 +69,14 @@ struct Index {
           // 图标
           SymbolGlyph($r(this.currentIndex === index ? item.activeIcon : item.icon))
             .fontSize(22)
-            .fontColor([this.currentIndex === index ? '#3b82f6' : '#94a3b8'])
+            .fontColor([this.currentIndex === index ? $r('app.color.brand_primary') : $r('app.color.text_secondary')])
             .animation({ duration: 250, curve: Curve.EaseOut })
 
           // 文字
           Text(item.label)
             .fontSize(11)
             .fontWeight(this.currentIndex === index ? FontWeight.Bold : FontWeight.Normal)
-            .fontColor(this.currentIndex === index ? '#3b82f6' : '#94a3b8')
+            .fontColor(this.currentIndex === index ? $r('app.color.brand_primary') : $r('app.color.text_secondary'))
             .margin({ top: 3 })
             .animation({ duration: 250, curve: Curve.EaseOut })
         }
@@ -107,11 +102,11 @@ struct Index {
     .height(62)
     .padding({ left: 6, right: 6 })
     // 磨砂玻璃核心样式
-    .backgroundColor('rgba(255, 255, 255, 0.72)')
+    .backgroundColor($r('app.color.card_bg'))
     .backdropBlur(25)
     .borderRadius(22)
     // 精致边框 + 阴影
-    .border({ width: 0.5, color: 'rgba(255, 255, 255, 0.8)' })
+    .border({ width: 0.5, color: $r('app.color.divider_color') })
     .shadow({ radius: 25, color: 'rgba(0, 0, 0, 0.08)', offsetY: 4 })
     .margin({ bottom: 28 })
   }

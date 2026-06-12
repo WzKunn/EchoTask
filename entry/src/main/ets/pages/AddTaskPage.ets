@@ -17,6 +17,8 @@ export function AddTaskPageBuilder() {
 struct AddTaskPage {
   pathStack: NavPathStack = new NavPathStack();
 
+  @StorageProp('isDarkMode') isDarkMode: boolean = false;
+
   // --- 模式与录音状态 ---
   @State inputMode: string = 'voice';        // 'voice' | 'manual'
   @State isListening: boolean = false;
@@ -226,10 +228,10 @@ struct AddTaskPage {
                   Row({ space: 6 }) {
                     SymbolGlyph($r('sys.symbol.mic_fill'))
                       .fontSize(12)
-                      .fontColor(['#94a3b8'])
+                      .fontColor([$r('app.color.text_tertiary')])
                     Text('原始语音："' + this.recognizedText + '"')
                       .fontSize(12)
-                      .fontColor('#94a3b8')
+                      .fontColor($r('app.color.text_tertiary'))
                       .maxLines(2)
                       .textOverflow({ overflow: TextOverflow.Ellipsis })
                       .layoutWeight(1)
@@ -242,14 +244,14 @@ struct AddTaskPage {
                 Row({ space: 6 }) {
                   SymbolGlyph($r('sys.symbol.mic_fill'))
                     .fontSize(14)
-                    .fontColor(['#3b82f6'])
+                    .fontColor([$r('app.color.brand_primary')])
                   Text('重新录制')
                     .fontSize(13)
-                    .fontColor('#3b82f6')
+                    .fontColor($r('app.color.brand_primary'))
                     .fontWeight(FontWeight.Medium)
                 }
                 .padding({ left: 16, right: 16, top: 8, bottom: 8 })
-                .backgroundColor('#eff6ff')
+                .backgroundColor($r('app.color.brand_primary_bg'))
                 .borderRadius(20)
                 .margin({ top: 8, bottom: 16 })
                 .onClick(() => {
@@ -291,9 +293,9 @@ struct AddTaskPage {
     .linearGradient({
       direction: GradientDirection.LeftTop,
       colors: [
-        ['#F0F9FF', 0.0],
-        ['#E0F2FE', 0.4],
-        ['#F9FAFB', 0.9]
+        [$r('app.color.page_gradient_start'), 0.0],
+        [$r('app.color.page_gradient_start'), 0.4],
+        [$r('app.color.page_gradient_end'), 0.9]
       ]
     })
     .title('新日程')
@@ -312,16 +314,16 @@ struct AddTaskPage {
       Row({ space: 6 }) {
         SymbolGlyph($r('sys.symbol.mic_fill'))
           .fontSize(15)
-          .fontColor([this.inputMode === 'voice' ? Color.White : '#64748b'])
+          .fontColor([this.inputMode === 'voice' ? Color.White : $r('app.color.text_secondary')])
         Text('语音输入')
           .fontSize(14)
           .fontWeight(this.inputMode === 'voice' ? FontWeight.Bold : FontWeight.Normal)
-          .fontColor(this.inputMode === 'voice' ? Color.White : '#64748b')
+          .fontColor(this.inputMode === 'voice' ? Color.White : $r('app.color.text_secondary'))
       }
       .height(42)
       .layoutWeight(1)
       .justifyContent(FlexAlign.Center)
-      .backgroundColor(this.inputMode === 'voice' ? '#3b82f6' : Color.Transparent)
+      .backgroundColor(this.inputMode === 'voice' ? $r('app.color.brand_primary') : Color.Transparent)
       .borderRadius(16)
       .animation({ duration: 250, curve: Curve.EaseInOut })
       .onClick(() => {
@@ -342,16 +344,16 @@ struct AddTaskPage {
       Row({ space: 6 }) {
         SymbolGlyph($r('sys.symbol.plus'))
           .fontSize(15)
-          .fontColor([this.inputMode === 'manual' ? Color.White : '#64748b'])
+          .fontColor([this.inputMode === 'manual' ? Color.White : $r('app.color.text_secondary')])
         Text('手动输入')
           .fontSize(14)
           .fontWeight(this.inputMode === 'manual' ? FontWeight.Bold : FontWeight.Normal)
-          .fontColor(this.inputMode === 'manual' ? Color.White : '#64748b')
+          .fontColor(this.inputMode === 'manual' ? Color.White : $r('app.color.text_secondary'))
       }
       .height(42)
       .layoutWeight(1)
       .justifyContent(FlexAlign.Center)
-      .backgroundColor(this.inputMode === 'manual' ? '#3b82f6' : Color.Transparent)
+      .backgroundColor(this.inputMode === 'manual' ? $r('app.color.brand_primary') : Color.Transparent)
       .borderRadius(16)
       .animation({ duration: 250, curve: Curve.EaseInOut })
       .onClick(() => {
@@ -363,7 +365,7 @@ struct AddTaskPage {
     }
     .width('90%')
     .padding(4)
-    .backgroundColor('#F1F5F9')
+    .backgroundColor($r('app.color.app_bg'))
     .borderRadius(20)
     .margin({ top: 16, bottom: 12 })
   }
@@ -381,7 +383,7 @@ struct AddTaskPage {
           Text(this.recognizedText.length > 0 && this.recognizedText !== '正在听...'
             ? this.recognizedText : '正在聆听...')
             .fontSize(20)
-            .fontColor('#3b82f6')
+            .fontColor($r('app.color.brand_primary'))
             .fontWeight(FontWeight.Medium)
             .textAlign(TextAlign.Center)
             .padding({ left: 30, right: 30 })
@@ -390,30 +392,30 @@ struct AddTaskPage {
           // 录音中提示
           Text('松手结束录音')
             .fontSize(13)
-            .fontColor('#94a3b8')
+            .fontColor($r('app.color.text_tertiary'))
         }
       } else if (this.recognizedText.length > 0 && this.recognizedText !== '正在听...') {
         // 录完等待解析
         Column({ space: 12 }) {
           Text(this.recognizedText)
             .fontSize(20)
-            .fontColor('#3b82f6')
+            .fontColor($r('app.color.brand_primary'))
             .fontWeight(FontWeight.Medium)
             .textAlign(TextAlign.Center)
             .padding({ left: 30, right: 30 })
           Text('正在分析语义...')
             .fontSize(14)
-            .fontColor('#94a3b8')
+            .fontColor($r('app.color.text_tertiary'))
         }
       } else {
         // 未开始录音
         Column({ space: 12 }) {
           SymbolGlyph($r('sys.symbol.mic_fill'))
             .fontSize(48)
-            .fontColor(['#cbd5e1'])
+            .fontColor([$r('app.color.text_tertiary')])
           Text('长按下方按钮，说出你的安排')
             .fontSize(15)
-            .fontColor('#94a3b8')
+            .fontColor($r('app.color.text_tertiary'))
             .margin({ top: 8 })
         }
       }
@@ -431,12 +433,12 @@ struct AddTaskPage {
           Circle()
             .width(110)
             .height(110)
-            .fill('#3b82f6')
+            .fill($r('app.color.brand_primary'))
             .opacity(0.08)
           Circle()
             .width(96)
             .height(96)
-            .fill('#3b82f6')
+            .fill($r('app.color.brand_primary'))
             .opacity(0.14)
         }
 
@@ -447,7 +449,7 @@ struct AddTaskPage {
         }
         .width(80)
         .height(80)
-        .backgroundColor(this.isListening ? '#ef4444' : '#3b82f6')
+        .backgroundColor(this.isListening ? $r('app.color.danger_color') : $r('app.color.brand_primary'))
         .shadow({
           radius: 20,
           color: this.isListening ? 'rgba(239,68,68,0.3)' : 'rgba(59,130,246,0.3)',
@@ -505,7 +507,7 @@ struct AddTaskPage {
         Text(this.inputMode === 'voice' ? 'AI 识别结果' : '添加新日程')
           .fontSize(18)
           .fontWeight(FontWeight.Bold)
-          .fontColor('#1e293b')
+          .fontColor($r('app.color.text_primary'))
       }
       .width('100%')
       .margin({ bottom: 24 })
@@ -517,16 +519,16 @@ struct AddTaskPage {
             .fontSize(13)
           Text('事件内容')
             .fontSize(13)
-            .fontColor('#64748b')
+            .fontColor($r('app.color.text_secondary'))
             .fontWeight(FontWeight.Medium)
         }
 
         TextInput({ placeholder: '请输入日程内容...', text: $$this.editContent })
           .height(50)
           .fontSize(16)
-          .fontColor('#1e293b')
-          .placeholderColor('#94a3b8')
-          .backgroundColor('#F1F5F9')
+          .fontColor($r('app.color.text_primary'))
+          .placeholderColor($r('app.color.text_tertiary'))
+          .backgroundColor($r('app.color.app_bg'))
           .borderRadius(14)
           .padding({ left: 16, right: 16 })
       }
@@ -542,16 +544,16 @@ struct AddTaskPage {
               .fontSize(13)
             Text('日期')
               .fontSize(13)
-              .fontColor('#64748b')
+              .fontColor($r('app.color.text_secondary'))
               .fontWeight(FontWeight.Medium)
           }
 
           TextInput({ placeholder: 'YYYY-MM-DD', text: $$this.editDate })
             .height(50)
             .fontSize(15)
-            .fontColor('#1e293b')
-            .placeholderColor('#94a3b8')
-            .backgroundColor('#F1F5F9')
+            .fontColor($r('app.color.text_primary'))
+            .placeholderColor($r('app.color.text_tertiary'))
+            .backgroundColor($r('app.color.app_bg'))
             .borderRadius(14)
             .padding({ left: 16, right: 16 })
         }
@@ -565,16 +567,16 @@ struct AddTaskPage {
               .fontSize(13)
             Text('时间')
               .fontSize(13)
-              .fontColor('#64748b')
+              .fontColor($r('app.color.text_secondary'))
               .fontWeight(FontWeight.Medium)
           }
 
           TextInput({ placeholder: 'HH:mm', text: $$this.editTime })
             .height(50)
             .fontSize(15)
-            .fontColor('#1e293b')
-            .placeholderColor('#94a3b8')
-            .backgroundColor('#F1F5F9')
+            .fontColor($r('app.color.text_primary'))
+            .placeholderColor($r('app.color.text_tertiary'))
+            .backgroundColor($r('app.color.app_bg'))
             .borderRadius(14)
             .padding({ left: 16, right: 16 })
         }
@@ -591,7 +593,7 @@ struct AddTaskPage {
             .fontSize(13)
           Text('标签')
             .fontSize(13)
-            .fontColor('#64748b')
+            .fontColor($r('app.color.text_secondary'))
             .fontWeight(FontWeight.Medium)
         }
 
@@ -601,20 +603,20 @@ struct AddTaskPage {
             Row({ space: 6 }) {
               Text(tag)
                 .fontSize(13)
-                .fontColor('#3b82f6')
+                .fontColor($r('app.color.brand_primary'))
                 .fontWeight(FontWeight.Medium)
               Text('×')
                 .fontSize(16)
-                .fontColor('#93c5fd')
+                .fontColor($r('app.color.text_tertiary'))
                 .fontWeight(FontWeight.Bold)
                 .onClick(() => {
                   this.removeTag(tag);
                 })
             }
             .padding({ left: 14, right: 10, top: 7, bottom: 7 })
-            .backgroundColor('#eff6ff')
+            .backgroundColor($r('app.color.brand_primary_bg'))
             .borderRadius(20)
-            .border({ width: 0.5, color: '#dbeafe' })
+            .border({ width: 0.5, color: $r('app.color.brand_border') })
             .margin({ right: 8, bottom: 8 })
             .animation({ duration: 200, curve: Curve.EaseOut })
           }, (tag: string) => tag)
@@ -624,9 +626,9 @@ struct AddTaskPage {
             .width(140)
             .height(36)
             .fontSize(13)
-            .fontColor('#1e293b')
-            .placeholderColor('#94a3b8')
-            .backgroundColor('#F1F5F9')
+            .fontColor($r('app.color.text_primary'))
+            .placeholderColor($r('app.color.text_tertiary'))
+            .backgroundColor($r('app.color.app_bg'))
             .borderRadius(20)
             .padding({ left: 14, right: 14 })
             .enterKeyType(EnterKeyType.Done)
@@ -647,7 +649,7 @@ struct AddTaskPage {
         .fontSize(17)
         .fontWeight(FontWeight.Bold)
         .fontColor(Color.White)
-        .backgroundColor('#3b82f6')
+        .backgroundColor($r('app.color.brand_primary'))
         .borderRadius(16)
         .shadow({ radius: 14, color: 'rgba(59,130,246,0.25)', offsetY: 4 })
         .margin({ top: 32 })
@@ -657,7 +659,7 @@ struct AddTaskPage {
     }
     .width('90%')
     .padding(24)
-    .backgroundColor(Color.White)
+    .backgroundColor($r('app.color.card_bg'))
     .borderRadius(24)
     .shadow({ radius: 20, color: 'rgba(0,0,0,0.06)', offsetY: 4 })
     .margin({ top: 8, bottom: 30 })

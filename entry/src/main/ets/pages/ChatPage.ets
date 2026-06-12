@@ -141,6 +141,7 @@ function parseInline(text: string): TextSegment[] {
 
 @Component
 export struct ChatView {
+  @StorageProp('isDarkMode') isDarkMode: boolean = false;
   @StorageLink('cloudApiModel') cloudApiModel: string = '';
   @StorageLink('cloudApiKey') cloudApiKey: string = '';
   @StorageLink('cloudApiUrl') cloudApiUrl: string = '';
@@ -163,7 +164,7 @@ export struct ChatView {
         Text('Echo AI')
           .fontSize(22)
           .fontWeight(FontWeight.Bold)
-          .fontColor('#1e293b')
+          .fontColor($r('app.color.text_primary'))
       }
       .width('100%')
       .padding({ left: 24, top: 16, bottom: 16 })
@@ -195,7 +196,7 @@ export struct ChatView {
           })
             .layoutWeight(1)
             .height(45)
-            .backgroundColor('rgba(255,255,255,0.9)')
+            .backgroundColor($r('app.color.card_bg'))
             .borderRadius(20)
             .onChange((val) => this.inputText = val)
             .enabled(!this.isThinking)
@@ -204,7 +205,7 @@ export struct ChatView {
           Button('发送')
             .margin({ left: 10 })
             .fontColor(Color.White)
-            .backgroundColor(this.inputText.trim() && !this.isThinking ? '#3b82f6' : '#cbd5e1')
+            .backgroundColor(this.inputText.trim() && !this.isThinking ? $r('app.color.brand_primary') : $r('app.color.text_tertiary'))
             .enabled(this.inputText.trim().length > 0 && !this.isThinking)
             .onClick(() => this.sendMessage())
         }
@@ -213,7 +214,7 @@ export struct ChatView {
 
         Text('此对话调用您填入的API，请注意Token消耗')
           .fontSize(10)
-          .fontColor('#94a3b8')
+          .fontColor($r('app.color.text_secondary'))
           .margin({ bottom: 30 })
       }
       .width('100%')
@@ -242,7 +243,7 @@ export struct ChatView {
                     ForEach(parseInline(block.content), (seg: TextSegment) => {
                       Span(seg.content)
                         .fontWeight(seg.isBold ? FontWeight.Bold : FontWeight.Normal)
-                        .fontColor(seg.isCode ? '#ef4444' : '#1e293b')
+                        .fontColor(seg.isCode ? $r('app.color.danger_color') : $r('app.color.text_primary'))
                         .fontFamily(seg.isCode ? 'monospace' : '')
                     })
                   }
@@ -255,26 +256,26 @@ export struct ChatView {
                       Row() {
                         Text(block.language)
                           .fontSize(12)
-                          .fontColor('#94a3b8')
+                          .fontColor($r('app.color.text_secondary'))
                       }
                       .width('100%')
                       .padding({ left: 8, right: 8, top: 4, bottom: 4 })
-                      .backgroundColor('#f1f5f9')
+                      .backgroundColor($r('app.color.app_bg'))
                       .borderRadius({ topLeft: 8, topRight: 8 })
                     }
                     Text(block.content)
                       .fontSize(13)
                       .fontFamily('monospace')
-                      .fontColor('#334155')
+                      .fontColor($r('app.color.text_primary'))
                       .padding(12)
                       .copyOption(CopyOptions.LocalDevice)
                       .wordBreak(WordBreak.BREAK_ALL)
                       .width('100%')
                   }
                   .width('100%')
-                  .backgroundColor('#f8fafc')
+                  .backgroundColor($r('app.color.card_bg'))
                   .borderRadius(8)
-                  .border({ width: 1, color: '#e2e8f0' })
+                  .border({ width: 1, color: $r('app.color.divider_color') })
                   .clip(true)
                 }
               })
@@ -283,7 +284,7 @@ export struct ChatView {
             .padding(12)
           }
         }
-        .backgroundColor(msg.role === 'user' ? '#3b82f6' : Color.White)
+        .backgroundColor(msg.role === 'user' ? $r('app.color.brand_primary') : $r('app.color.card_bg'))
         .borderRadius(15)
         .shadow({ radius: 5, color: 'rgba(0,0,0,0.05)' })
         .width(msg.role === 'assistant' ? '100%' : undefined)
@@ -298,10 +299,10 @@ export struct ChatView {
       Column() {
         Text('思考中...')
           .fontSize(14)
-          .fontColor('#94a3b8')
+          .fontColor($r('app.color.text_secondary'))
           .padding(12)
       }
-      .backgroundColor(Color.White)
+      .backgroundColor($r('app.color.card_bg'))
       .borderRadius(15)
       .shadow({ radius: 5, color: 'rgba(0,0,0,0.05)' })
       
