@@ -7,6 +7,12 @@ import { taskStore } from '../utils/TaskStore';
 import { TimeUtils } from '../utils/TimeUtils';
 import { IntentManager } from '../utils/IntentManager';
 import { window } from '@kit.ArkUI';
+import { textRecognition } from '@kit.CoreVisionKit';
+import { fileIo } from '@kit.CoreFileKit';
+import { image } from '@kit.ImageKit';
+import picker from '@ohos.file.picker';
+import { cameraPicker, camera } from '@kit.CameraKit';
+import { BusinessError } from '@kit.BasicServicesKit';
 
 @Builder
 export function AddTaskPageBuilder() {
@@ -20,8 +26,9 @@ struct AddTaskPage {
   @StorageProp('isDarkMode') isDarkMode: boolean = false;
 
   // --- 模式与录音状态 ---
-  @State inputMode: string = 'voice';        // 'voice' | 'manual'
+  @State inputMode: string = 'voice';        // 'voice' | 'image' | 'manual'
   @State isListening: boolean = false;
+  @State isParsingImage: boolean = false;    // 图像识别 Loading 状态
   @State recognizedText: string = '';
   @State analyzedTask: TaskItem | null = null;
   private asrEngine: speechRecognizer.SpeechRecognitionEngine | undefined = undefined;
@@ -274,6 +281,48 @@ struct AddTaskPage {
             .layoutWeight(1)
             .scrollBar(BarState.Off)
           }
+        } else if (this.inputMode === 'image') {
+          if (!this.showForm) {
+            // 图像识别区域
+            this.ImageRecordArea()
+          } else {
+            // 图像识别完成 → 可编辑表单
+            Scroll() {
+              Column() {
+                // 重新选择/拍照按钮
+                Row({ space: 6 }) {
+                  SymbolGlyph($r('sys.symbol.picture'))
+                    .fontSize(14)
+                    .fontColor([$r('app.color.brand_primary')])
+                  Text('重新识别')
+                    .fontSize(13)
+                    .fontColor($r('app.color.brand_primary'))
+                    .fontWeight(FontWeight.Medium)
+                }
+                .padding({ left: 16, right: 16, top: 8, bottom: 8 })
+                .backgroundColor($r('app.color.brand_primary_bg'))
+                .borderRadius(20)
+                .margin({ top: 8, bottom: 16 })
+                .onClick(() => {
+                  this.showForm = false;
+                  this.isParsingImage = false;
+                  this.analyzedTask = null;
+                  this.editContent = '';
+                  this.editDate = '';
+                  this.editTime = '';
+                  this.editTags = [];
+                  this.newTagInput = '';
+                })
+
+                // 可编辑表单
+                this.EditableForm()
+              }
+              .width('100%')
+              .alignItems(HorizontalAlign.Center)
+            }
+            .layoutWeight(1)
+            .scrollBar(BarState.Off)
+          }
         } else {
           // 手动输入模式 → 直接展示表单
           Scroll() {
@@ -337,6 +386,37 @@ struct AddTaskPage {
           this.editTime = '';
           this.editTags = [];
           this.newTagInput = '';
+        }
+      })
+
+      // 图像识别 Tab
+      Row({ space: 6 }) {
+        SymbolGlyph($r('sys.symbol.picture'))
+          .fontSize(15)
+          .fontColor([this.inputMode === 'image' ? Color.White : $r('app.color.text_secondary')])
+        Text('图像识别')
+          .fontSize(14)
+          .fontWeight(this.inputMode === 'image' ? FontWeight.Bold : FontWeight.Normal)
+          .fontColor(this.inputMode === 'image' ? Color.White : $r('app.color.text_secondary'))
+      }
+      .height(42)
+      .layoutWeight(1)
+      .justifyContent(FlexAlign.Center)
+      .backgroundColor(this.inputMode === 'image' ? $r('app.color.brand_primary') : Color.Transparent)
+      .borderRadius(16)
+      .animation({ duration: 250, curve: Curve.EaseInOut })
+      .onClick(() => {
+        if (this.inputMode !== 'image') {
+          this.inputMode = 'image';
+          this.showForm = false;
+          this.recognizedText = '';
+          this.analyzedTask = null;
+          this.editContent = '';
+          this.editDate = '';
+          this.editTime = '';
+          this.editTags = [];
+          this.newTagInput = '';
+          this.isParsingImage = false;
         }
       })
 
@@ -495,7 +575,180 @@ struct AddTaskPage {
   }
 
   // ========================
-  //  可编辑表单（语音结果 / 手动输入 共用）
+  //  图像识别区域与逻辑
+  // ========================
+
+  @Builder ImageRecordArea() {
+    Column() {
+      if (this.isParsingImage) {
+        // 正在解析中
+        Column({ space: 16 }) {
+          LoadingProgress()
+            .width(60)
+            .height(60)
+            .color($r('app.color.brand_primary'))
+          Text('正在提取图片文字与日程信息...')
+            .fontSize(16)
+            .fontColor($r('app.color.brand_primary'))
+            .fontWeight(FontWeight.Medium)
+        }
+      } else {
+        // 未选择图片
+        Column({ space: 16 }) {
+          SymbolGlyph($r('sys.symbol.picture'))
+            .fontSize(64)
+            .fontColor([$r('app.color.text_tertiary')])
+          Text('上传海报、截图或拍照，AI自动提取日程')
+            .fontSize(15)
+            .fontColor($r('app.color.text_tertiary'))
+            .textAlign(TextAlign.Center)
+            .padding({ left: 30, right: 30 })
+        }
+      }
+    }
+    .width('100%')
+    .layoutWeight(1)
+    .justifyContent(FlexAlign.Center)
+    .alignItems(HorizontalAlign.Center)
+
+    // 底部按钮组
+    if (!this.isParsingImage) {
+      Row({ space: 24 }) {
+        // 相册按钮
+        Column({ space: 8 }) {
+          Button({ type: ButtonType.Circle }) {
+            SymbolGlyph($r('sys.symbol.picture'))
+              .fontSize(28)
+              .fontColor([$r('app.color.brand_primary')])
+          }
+          .width(64)
+          .height(64)
+          .backgroundColor($r('app.color.card_bg'))
+          .border({ width: 1, color: $r('app.color.divider_color') })
+          .shadow({ radius: 10, color: 'rgba(0,0,0,0.05)', offsetY: 4 })
+          .onClick(() => {
+            this.pickFromGallery();
+          })
+          Text('相册提取')
+            .fontSize(13)
+            .fontColor($r('app.color.text_secondary'))
+        }
+
+        // 拍照按钮
+        Column({ space: 8 }) {
+          Button({ type: ButtonType.Circle }) {
+            SymbolGlyph($r('sys.symbol.camera'))
+              .fontSize(28)
+              .fontColor([Color.White])
+          }
+          .width(64)
+          .height(64)
+          .backgroundColor($r('app.color.brand_primary'))
+          .shadow({ radius: 15, color: 'rgba(59,130,246,0.3)', offsetY: 4 })
+          .onClick(() => {
+            this.takePhoto();
+          })
+          Text('拍照识别')
+            .fontSize(13)
+            .fontColor($r('app.color.text_secondary'))
+        }
+      }
+      .margin({ bottom: 60 })
+    }
+  }
+
+  async pickFromGallery() {
+    try {
+      let photoPicker = new picker.PhotoViewPicker();
+      let options = new picker.PhotoSelectOptions();
+      options.MIMEType = picker.PhotoViewMIMETypes.IMAGE_TYPE;
+      options.maxSelectNumber = 1;
+      let result = await photoPicker.select(options);
+      if (result && result.photoUris && result.photoUris.length > 0) {
+        this.processImageToTask(result.photoUris[0]);
+      }
+    } catch (err) {
+      console.error('选择相册图片失败:', err);
+      promptAction.showToast({ message: '选择图片失败' });
+    }
+  }
+
+  async takePhoto() {
+    try {
+      let context = getContext(this) as common.UIAbilityContext;
+      let pickerProfile: cameraPicker.PickerProfile = {
+        cameraPosition: camera.CameraPosition.CAMERA_POSITION_BACK
+      };
+      let pickerResult = await cameraPicker.pick(context,
+        [cameraPicker.PickerMediaType.PHOTO], pickerProfile);
+      if (pickerResult && pickerResult.resultUri) {
+        this.processImageToTask(pickerResult.resultUri);
+      }
+    } catch (err) {
+      let e = err as BusinessError;
+      if (e.code === 201) {
+        console.info('用户取消了拍照');
+      } else {
+        console.error('调用相机失败:', err);
+        promptAction.showToast({ message: '调用相机失败' });
+      }
+    }
+  }
+
+  async processImageToTask(uri: string) {
+    let useCloudModel = AppStorage.get<boolean>('useCloudModel');
+    if (!useCloudModel) {
+      promptAction.showToast({ message: '请先在“我的”页面开启大模型调用能力', duration: 3000 });
+      return;
+    }
+
+    this.isParsingImage = true;
+    try {
+      // 1. 获取 PixelMap
+      let file = fileIo.openSync(uri, fileIo.OpenMode.READ_ONLY);
+      let imageSource = image.createImageSource(file.fd);
+      let pixelMap = await imageSource.createPixelMap();
+      
+      // 2. OCR 识别
+      let visionInfo: textRecognition.VisionInfo = { pixelMap: pixelMap };
+      let textConfig: textRecognition.TextRecognitionConfiguration = { 
+        isDirectionDetectionSupported: false 
+      };
+      let recognitionResult = await textRecognition.recognizeText(visionInfo, textConfig);
+      
+      let extractedText = recognitionResult.value;
+      console.info('OCR 提取出的文本:', extractedText);
+      
+      // 释放资源
+      pixelMap.release();
+      imageSource.release();
+      fileIo.closeSync(file);
+
+      if (!extractedText || extractedText.trim().length === 0) {
+        promptAction.showToast({ message: '未能在图片中识别到清晰的文字' });
+        this.isParsingImage = false;
+        return;
+      }
+
+      // 3. 传给大模型解析（在 Prompt 前增加上下文以适应杂乱文本）
+      let promptText = `请从以下OCR识别的截图文字中，提取日程信息（包含标题、时间、地点）。文字可能会有乱码或排版错乱：\n\n${extractedText}`;
+      
+      let parsedTask = await NLPUtils.analyzeTaskSemantic(promptText);
+      this.analyzedTask = parsedTask;
+      
+      // 4. 填入表单
+      this.populateFormFromTask(parsedTask);
+      
+    } catch (error) {
+      console.error('图片识别/解析失败:', error);
+      promptAction.showToast({ message: '图片解析失败，可能图片太模糊或文字不清晰' });
+    } finally {
+      this.isParsingImage = false;
+    }
+  }
+
+  // ========================
+  //  可编辑表单（语音结果 / 手动输入 / 图像结果 共用）
   // ========================
 
   @Builder EditableForm() {

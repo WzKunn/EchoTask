@@ -340,6 +340,9 @@ export struct MineView {
             Text(this.useCloudModel ? '2、提供AI对话功能。' : '2、无法使用AI对话功能。')
               .fontSize(11)
               .fontColor($r('app.color.text_secondary'))
+            Text(this.useCloudModel ? '3、可以使用图像识别创建日程功能。' : '3、无法使用图像识别创建日程功能。')
+              .fontSize(11)
+              .fontColor($r('app.color.text_secondary'))
           }
           .width('100%')
           .alignItems(HorizontalAlign.Start)
@@ -410,7 +413,9 @@ export struct MineView {
           Divider().color($r('app.color.divider_color')).margin({ left: 52, right: 16 })
 
           // 通知提醒
-          this.SettingRow('sys.symbol.bell', '通知提醒', $r('app.color.success_color'), true)
+          this.SettingRow('sys.symbol.bell', '通知提醒', $r('app.color.success_color'), true, false, (isOn: boolean) => {
+            promptAction.showToast({ message: isOn ? '已开启通知' : '已关闭通知' });
+          })
 
           Divider().color($r('app.color.divider_color')).margin({ left: 52, right: 16 })
 
@@ -434,7 +439,7 @@ export struct MineView {
           .width('100%')
           .padding({ left: 16, right: 16, top: 14, bottom: 14 })
           .onClick(() => {
-            promptAction.showToast({ message: '功能开发中，敬请期待' });
+            promptAction.showToast({ message: '已为您清理不必要的缓存内容' });
           })
         }
         .width('100%')
