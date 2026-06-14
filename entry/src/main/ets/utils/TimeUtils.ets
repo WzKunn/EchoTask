@@ -159,4 +159,33 @@ export class TimeUtils {
 
     return month + '月' + day + '日 ' + hours + ':' + minutes;
   }
+
+  /**
+   * 仅提取日期用于分组，如 "今天"、"明天"、"6月15日"
+   */
+  public static getDateGroupStr(timestamp: number): string {
+    if (timestamp <= 0) return '未设定时间';
+
+    let date = new Date(timestamp);
+    let now = new Date();
+
+    let month = date.getMonth() + 1;
+    let day = date.getDate();
+
+    let todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    let targetDayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+    let dayDiff = Math.round((targetDayStart - todayStart) / (1000 * 60 * 60 * 24));
+
+    if (dayDiff === 0) return '今天';
+    if (dayDiff === 1) return '明天';
+    if (dayDiff === -1) return '昨天';
+    if (dayDiff === 2) return '后天';
+    
+    // 如果是今年，不显示年份；如果不是今年，则加上年份
+    if (date.getFullYear() === now.getFullYear()) {
+      return month + '月' + day + '日';
+    } else {
+      return date.getFullYear() + '年' + month + '月' + day + '日';
+    }
+  }
 }

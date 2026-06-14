@@ -24,6 +24,11 @@ export class TaskItem {
   }
 }
 
+export interface TaskGroup {
+  dateStr: string;
+  tasks: TaskItem[];
+}
+
 @Component
 export struct HomeView {
 
@@ -31,7 +36,7 @@ export struct HomeView {
 
   @StorageProp('isDarkMode') isDarkMode: boolean = false;
 
-  @State dataSource: LazyDataSource<TaskItem> = new LazyDataSource();
+  @State groupedTasks: TaskGroup[] = [];
   @State isListening: boolean = false;
   // 使用 StorageLink 绑定全局任务列表，实现跨页面同步
   @StorageLink('taskList') @Watch('onTasksChange') tasks: TaskItem[] = [];
@@ -39,9 +44,32 @@ export struct HomeView {
   // 2. 定义监听回调函数
   // 当 AppStorage 里的 taskList 发生任何改变（添加、删除、替换）时，都会触发此函数
   onTasksChange() {
-    console.info('数据已同步更新，正在刷新列表...');
-    // 手动同步数据源并触发 LazyForEach 刷新
-    this.dataSource.setItems(this.tasks);
+    console.info('数据已同步更新，正在刷新分组列表...');
+    this.updateGroupedTasks();
+  }
+
+  updateGroupedTasks() {
+    // 按照时间戳降序排序（越靠后的越先显示）
+    let sortedTasks = [...this.tasks].sort((a, b) => b.timestamp - a.timestamp);
+    let map = new Map<string, TaskItem[]>();
+    
+    // 收集所有用到的 dateStr 以保证在 Map 中的遍历顺序与插入一致
+    let orderedKeys: string[] = [];
+    
+    for (let task of sortedTasks) {
+      let groupStr = TimeUtils.getDateGroupStr(task.timestamp);
+      if (!map.has(groupStr)) {
+        map.set(groupStr, []);
+        orderedKeys.push(groupStr);
+      }
+      map.get(groupStr)!.push(task);
+    }
+    
+    let newGroups: TaskGroup[] = [];
+    for (let key of orderedKeys) {
+      newGroups.push({ dateStr: key, tasks: map.get(key)! });
+    }
+    this.groupedTasks = newGroups;
   }
 
   async aboutToAppear() {
@@ -74,7 +102,7 @@ export struct HomeView {
     // }
 
     // 将数据源与全局状态同步
-    this.dataSource.setItems(this.tasks);
+    this.updateGroupedTasks();
     try {
       let haspermission = await this.checkAndRequestCalendarPermission();
       if (haspermission) {
@@ -179,6 +207,15 @@ export struct HomeView {
     .alignItems(VerticalAlign.Center)
   }
 
+  @Builder groupHeader(title: string) {
+    Text(title)
+      .fontSize(14)
+      .fontWeight(FontWeight.Medium)
+      .fontColor($r('app.color.text_secondary'))
+      .width('100%')
+      .padding({ top: 8, bottom: 4 })
+  }
+
   build() {
     Stack({ alignContent: Alignment.Bottom }) {
 
@@ -188,18 +225,22 @@ export struct HomeView {
           .fontColor($r('app.color.text_primary'))
           .fontSize(32)
           .fontWeight(FontWeight.Bolder)
-          .margin({ bottom: 20 })
+          .margin({ bottom: 10 })
 
-        List({ space: 12 }) {
-          LazyForEach(this.dataSource, (item: TaskItem) => {
-            ListItem() {
-              this.TaskCard(item)
+        List({ space: 4 }) {
+          ForEach(this.groupedTasks, (group: TaskGroup) => {
+            ListItemGroup({ header: this.groupHeader(group.dateStr), space: 8 }) {
+              ForEach(group.tasks, (item: TaskItem) => {
+                ListItem() {
+                  this.TaskCard(item)
+                }
+                .swipeAction({
+                  end: this.swipeActionsBuilder(item),
+                  edgeEffect: SwipeEdgeEffect.Spring
+                })
+              }, (item: TaskItem) => item.id + '_' + item.isCompleted)
             }
-            .swipeAction({
-              end: this.swipeActionsBuilder(item),
-              edgeEffect: SwipeEdgeEffect.Spring
-            })
-          }, (item: TaskItem) => item.id + '_' + item.isCompleted) // 核心：把 isCompleted 加入 key 强制重绘
+          }, (group: TaskGroup) => group.dateStr + '_' + group.tasks.map(t => t.id + t.isCompleted).join(','))
         }
         .width('100%')
         .layoutWeight(1)
@@ -334,13 +375,17 @@ export struct HomeView {
 
   mockCreateTask(text: string) {
     // 实际开发中，这里调用 CoreTextKit 提取信息
-    this.dataSource.pushItem(new TaskItem(
+    let newTask = new TaskItem(
       Date.now().toString(),
       "新任务：" + text,
       "自动识别中...",
       Date.now(),
       ["待分类"]
-    ));
+    );
+    let currentTasks = AppStorage.get<TaskItem[]>('taskList') || [];
+    currentTasks.push(newTask);
+    AppStorage.setOrCreate('taskList', [...currentTasks]);
+    
     promptAction.showToast({ message: '已通过语音创建日程' });
   }
 
@@ -349,7 +394,11 @@ export struct HomeView {
       SymbolGlyph($r('sys.symbol.trash'))
     }
     .backgroundColor($r('app.color.danger_color'))
-    .onClick(() => this.dataSource.deleteItem(item))
+    .onClick(() => {
+      let currentTasks = AppStorage.get<TaskItem[]>('taskList') || [];
+      let updatedTasks = currentTasks.filter(t => t.id !== item.id);
+      AppStorage.setOrCreate('taskList', updatedTasks);
+    })
   }
 
   // 检测并请求日历权限
